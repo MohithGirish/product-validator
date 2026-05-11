@@ -1,0 +1,9 @@
+{
+  "name": "Factory Product Code Validator",
+  "description": "An application for factory quality control to validate product batch numbers and barcodes using local OCR and barcode decoding. It features user authentication and tracks all validation attempts.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "C7": [],
+  "aq": []
+}

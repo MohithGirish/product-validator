@@ -1,0 +1,27 @@
+{
+  "name": "factory-validator-backend",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon --watch server.js --watch db.js --watch seedProducts.js --watch localOcr.js --watch geminiOcr.js server.js",
+    "db:path": "node scripts/printDbPath.js",
+    "db:reset": "node scripts/resetDb.js",
+    "ocr:paddle:check": "node -e \"const fs=require('fs');const {spawnSync}=require('child_process');const candidates=[process.env.PADDLE_PYTHON_EXECUTABLE,'../.venv/Scripts/python.exe','../.venv/bin/python','python'];const py=(candidates.find(p=>p&&(p==='python'||fs.existsSync(p)))||'python');const r=spawnSync(py,['scripts/paddle_ocr_runner.py','--health'],{stdio:'inherit'});process.exit(r.status??1);\""
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@zxing/library": "^0.21.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "factory-product-code-validator-workspace": "file:..",
+    "multer": "^1.4.5-lts.1",
+    "sharp": "^0.34.3",
+    "sqlite3": "^5.1.7",
+    "tesseract.js": "^6.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}
