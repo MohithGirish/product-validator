@@ -1,6 +1,15 @@
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') });
 
+// Suppress noisy Tesseract C++ stderr lines that can't be silenced via the JS logger.
+const TESSERACT_NOISE = /Image too small to scale|Line cannot be recognized|Could not initialize tesseract|Estimating resolution|Empty page|Warning.*Tesseract/i;
+const _stderrWrite = process.stderr.write.bind(process.stderr);
+process.stderr.write = (chunk, ...args) => {
+  const text = typeof chunk === 'string' ? chunk : chunk.toString();
+  if (TESSERACT_NOISE.test(text)) return true;
+  return _stderrWrite(chunk, ...args);
+};
+
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
@@ -25,26 +34,28 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 4 *
 
 // ── OCR routing: Gemini first, local fallback ──────────────────────────────
 
+const NETWORK_ERROR = /timeout|ENOTFOUND|ECONNREFUSED|ETIMEDOUT|ECONNRESET|failed to fetch|getaddrinfo|socket hang up/i;
+
+function isNetworkError(err) {
+  return NETWORK_ERROR.test(err.message || String(err));
+}
+
+// Always try Gemini. Only fall back to local when Gemini is genuinely unreachable
+// (network down, DNS failure, timeout). Every other error surfaces to the caller.
 async function withGeminiFallback(geminiCall, localCall, label) {
   if (geminiOcr.isAvailable()) {
     try {
       const result = await geminiCall();
-      console.log(`[OCR] ${label}: Gemini succeeded.`);
+      console.log(`[OCR] ${label}: Gemini OK`);
       return { result, engine: 'gemini' };
     } catch (err) {
-      const reason = err.message || String(err);
-      const isNetworkIssue =
-        /timeout|ENOTFOUND|ECONNREFUSED|ETIMEDOUT|ECONNRESET|network|fetch|bandwidth/i.test(reason);
-      console.warn(
-        `[OCR] ${label}: Gemini failed (${isNetworkIssue ? 'network' : 'error'}: ${reason}). Falling back to local OCR.`
-      );
+      if (!isNetworkError(err)) throw err;
+      console.warn(`[OCR] ${label}: Gemini unreachable — switching to local OCR`);
     }
-  } else {
-    console.log(`[OCR] ${label}: No Gemini API key — using local OCR.`);
   }
 
   const result = await localCall();
-  console.log(`[OCR] ${label}: Local OCR succeeded.`);
+  console.log(`[OCR] ${label}: local OCR OK`);
   return { result, engine: 'local' };
 }
 
