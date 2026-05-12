@@ -34,7 +34,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 4 *
 
 // ── OCR routing: Gemini first, local fallback ──────────────────────────────
 
-const NETWORK_ERROR = /timeout|ENOTFOUND|ECONNREFUSED|ETIMEDOUT|ECONNRESET|failed to fetch|getaddrinfo|socket hang up/i;
+const NETWORK_ERROR = /timed out|timeout|ENOTFOUND|ECONNREFUSED|ETIMEDOUT|ECONNRESET|failed to fetch|getaddrinfo|socket hang up/i;
 
 function isNetworkError(err) {
   return NETWORK_ERROR.test(err.message || String(err));

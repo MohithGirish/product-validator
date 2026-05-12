@@ -18,7 +18,7 @@ A factory QC tool for validating product barcodes and batch codes using OCR. Upl
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS |
 | Backend | Node.js, Express |
 | Database | SQLite (`sqlite3`) |
-| Primary OCR | Google Gemini API (`gemini-1.5-flash`) |
+| Primary OCR | Google Gemini API (`gemini-2.5-flash`) |
 | Fallback OCR | PaddleOCR (Python) → Tesseract.js |
 | Barcode decoding | ZXing (`@zxing/library`) |
 | Image processing | Sharp |
