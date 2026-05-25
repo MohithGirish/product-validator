@@ -45,7 +45,7 @@ const LoginPage: React.FC = () => {
               backgroundPosition: 'center',
             }}
           />
-          <div className="absolute inset-0 bg-blue-900/40 z-0" />
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-950/60 via-blue-900/55 to-blue-800/45 z-0" />
 
           <div className="relative z-10">
             <div className="h-12 w-12 border-2 border-white/70 rounded-xl flex items-center justify-center backdrop-blur-sm bg-white/10">
@@ -53,7 +53,7 @@ const LoginPage: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
             </div>
-            <h1 className="mt-6 text-3xl font-bold tracking-tight leading-tight">Product<br />Validator</h1>
+            <h1 className="mt-6 text-3xl font-bold tracking-tight leading-[1.1]">Product<br />Validator</h1>
             <p className="mt-3 text-blue-100 text-sm leading-relaxed">
               Ensuring quality and accuracy for every product that leaves the factory floor.
             </p>
@@ -61,7 +61,7 @@ const LoginPage: React.FC = () => {
 
           <div className="relative z-10 mt-8">
             <div className="flex items-center gap-3 p-3 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20">
-              <div className="h-8 w-8 rounded-lg bg-green-400/90 flex items-center justify-center flex-shrink-0">
+              <div className="h-8 w-8 rounded-lg bg-emerald-500 flex items-center justify-center flex-shrink-0 shadow-sm">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
@@ -152,18 +152,22 @@ const LoginPage: React.FC = () => {
 
             {/* Demo Credentials */}
             <div className="mt-6 pt-5 border-t border-slate-100">
-              <p className="text-xs text-center text-slate-400 mb-2.5">Demo credentials</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 text-center mb-3">Demo credentials</p>
               <div className="flex gap-2">
                 <button
+                  type="button"
                   onClick={() => fillCredentials('admin', 'admin')}
-                  className="flex-1 py-2 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition"
+                  className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-colors"
                 >
+                  <span className="h-5 w-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-bold">A</span>
                   Admin
                 </button>
                 <button
+                  type="button"
                   onClick={() => fillCredentials('qcmanager', 'qcmanager')}
-                  className="flex-1 py-2 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition"
+                  className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-colors"
                 >
+                  <span className="h-5 w-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-bold">Q</span>
                   QC Manager
                 </button>
               </div>

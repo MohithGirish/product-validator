@@ -75,10 +75,10 @@ const StepIndicator: React.FC<{ step: 'barcode' | 'market_select' | 'batch' }> =
                 return (
                     <React.Fragment key={s.key}>
                         <div className="flex flex-col items-center">
-                            <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
-                                isDone   ? 'bg-blue-600 text-white' :
-                                isActive ? 'bg-blue-600 text-white ring-4 ring-blue-100' :
-                                           'bg-slate-200 text-slate-500'
+                            <div className={`h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-200 ${
+                                isDone   ? 'bg-blue-600 text-white shadow-sm' :
+                                isActive ? 'bg-blue-600 text-white ring-4 ring-blue-100 scale-110 shadow-sm' :
+                                           'bg-slate-100 text-slate-400 border border-slate-200'
                             }`}>
                                 {isDone ? (
                                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -86,12 +86,12 @@ const StepIndicator: React.FC<{ step: 'barcode' | 'market_select' | 'batch' }> =
                                     </svg>
                                 ) : i + 1}
                             </div>
-                            <span className={`mt-1.5 text-[11px] font-semibold whitespace-nowrap ${isActive || isDone ? 'text-blue-700' : 'text-slate-400'}`}>
+                            <span className={`mt-2 text-[11px] font-semibold whitespace-nowrap tracking-wide ${isActive || isDone ? 'text-blue-700' : 'text-slate-400'}`}>
                                 {s.label}
                             </span>
                         </div>
                         {i < steps.length - 1 && (
-                            <div className={`flex-1 h-0.5 mx-3 mb-5 rounded transition-colors ${isDone ? 'bg-blue-600' : 'bg-slate-200'}`} />
+                            <div className={`flex-1 h-px mx-3 mb-6 rounded transition-colors ${isDone ? 'bg-blue-600' : 'bg-slate-200'}`} />
                         )}
                     </React.Fragment>
                 );
@@ -111,11 +111,11 @@ const ProductNotFoundModal: React.FC<{ isOpen: boolean; onClose: () => void; }> 
             <div className="h-14 w-14 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
                 <XCircleIcon className="h-8 w-8 text-red-500" />
             </div>
-            <h2 className="text-lg font-bold text-slate-800">Product Not Found</h2>
+            <h2 className="text-lg font-semibold text-slate-900 tracking-tight">Product Not Found</h2>
             <p className="text-sm text-slate-500 mt-1.5">The scanned barcode does not match any product in the database.</p>
             <button
                 onClick={onClose}
-                className="mt-6 w-full bg-blue-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 transition"
+                className="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-lg shadow-sm transition-colors"
             >
                 OK
             </button>
@@ -138,24 +138,26 @@ const ImageUploader: React.FC<{
     <div className="space-y-3">
         {/* Drop zone */}
         <div
-            className={`flex justify-center px-6 pt-8 pb-8 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${
+            className={`flex justify-center items-center px-6 py-10 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-200 group ${
                 imageUrl
-                  ? 'border-blue-400 bg-blue-50/50'
-                  : 'border-slate-300 hover:border-blue-400 hover:bg-blue-50/30'
+                  ? 'border-blue-400 bg-blue-50/40'
+                  : 'border-slate-300 hover:border-blue-500 hover:bg-blue-50/40'
             }`}
             onClick={() => fileInputRef.current?.click()}
             role="button"
             aria-label="Upload image"
         >
-            <div className="text-center">
+            <div className="text-center flex flex-col items-center justify-center">
                 {imageUrl ? (
                     <img src={imageUrl} alt="Preview" className="mx-auto h-44 w-auto rounded-lg object-contain" />
                 ) : (
                     <>
-                        <div className="h-12 w-12 rounded-xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
-                            <UploadIcon />
+                        <div className="h-14 w-14 rounded-xl bg-slate-100 group-hover:bg-blue-100 flex items-center justify-center mb-3 transition-colors">
+                            <span className="text-slate-500 group-hover:text-blue-600 transition-colors scale-125">
+                                <UploadIcon />
+                            </span>
                         </div>
-                        <p className="text-sm font-medium text-slate-700">Click to upload an image</p>
+                        <p className="text-sm font-semibold text-slate-700">Click to upload an image</p>
                         <p className="text-xs text-slate-400 mt-1">PNG, JPG up to 4 MB</p>
                     </>
                 )}
@@ -189,7 +191,7 @@ const ImageUploader: React.FC<{
         <button
             type="button"
             onClick={onCameraClick}
-            className="w-full flex justify-center items-center gap-2 bg-slate-800 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-slate-900 transition"
+            className="w-full flex justify-center items-center gap-2 bg-slate-900 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-slate-800 transition-colors shadow-sm"
         >
             <CameraIcon className="w-4 h-4" />
             Use Camera
@@ -404,23 +406,24 @@ const ValidatorPage: React.FC = () => {
       {/* Product Identified Popup */}
       {showBarcodeSuccessPopup && foundProduct && (
         <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center">
-            <div className="h-14 w-14 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-3">
-                <CheckCircleIcon className="h-8 w-8 text-green-500" />
+          <div className="bg-white rounded-2xl shadow-2xl border-t-4 border-emerald-500 w-full max-w-sm p-5 text-center animate-slide-up">
+            <div className="h-14 w-14 rounded-full bg-emerald-50 ring-4 ring-emerald-50/60 flex items-center justify-center mx-auto mb-3">
+                <CheckCircleIcon className="h-8 w-8 text-emerald-500" />
             </div>
-            <h2 className="text-lg font-bold text-slate-900">Product Identified!</h2>
-            <div className="mt-4 border-t pt-4 text-left space-y-2">
+            <h2 className="text-lg font-semibold text-slate-900 tracking-tight">Product Identified</h2>
+            <p className="text-sm text-slate-500 mt-1">Proceeding to batch validation…</p>
+            <div className="mt-4 border-t border-slate-100 pt-4 text-left space-y-2.5">
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-slate-500 font-medium">Product</span>
-                  <span className="font-semibold text-slate-800">{foundProduct.productName}</span>
+                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Product</span>
+                  <span className="font-semibold text-slate-800 text-right ml-3 truncate">{foundProduct.productName}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-slate-500 font-medium">Market</span>
+                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Market</span>
                   <span className="font-semibold text-slate-800 capitalize">{foundProduct.marketType}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-slate-500 font-medium">Barcode</span>
-                  <span className="font-mono text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-xs">{extractedBarcode}</span>
+                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Barcode</span>
+                  <span className="font-mono text-slate-800 bg-slate-100 px-2 py-0.5 rounded text-xs">{extractedBarcode}</span>
                 </div>
             </div>
           </div>
@@ -430,12 +433,17 @@ const ValidatorPage: React.FC = () => {
       <div className="max-w-2xl mx-auto">
         {/* Mode badge row */}
         <div className="flex justify-end mb-3">
-          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-colors ${
+          <span className={`inline-flex items-center gap-2 pl-2 pr-3 py-1 rounded-full text-xs font-semibold transition-colors shadow-sm ${
             ocrEngine === 'gemini'
               ? 'bg-blue-50 text-blue-700 border border-blue-200'
               : 'bg-amber-50 text-amber-700 border border-amber-200'
           }`}>
-            <span className={`h-1.5 w-1.5 rounded-full ${ocrEngine === 'gemini' ? 'bg-blue-500' : 'bg-amber-500'}`} />
+            <span className="relative flex h-2 w-2">
+              {ocrEngine === 'gemini' && (
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+              )}
+              <span className={`relative inline-flex rounded-full h-2 w-2 ${ocrEngine === 'gemini' ? 'bg-blue-500' : 'bg-amber-500'}`} />
+            </span>
             {ocrEngine === 'gemini' ? 'Gemini Mode' : 'Local Mode'}
           </span>
         </div>
@@ -444,9 +452,9 @@ const ValidatorPage: React.FC = () => {
 
         {/* ── Step 1: Barcode ─────────────────────────────── */}
         {step === 'barcode' && (
-            <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden animate-slide-up">
-              <div className="px-6 py-5 border-b border-slate-100">
-                  <h2 className="text-lg font-bold text-slate-900">Scan Barcode</h2>
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden animate-slide-up">
+              <div className="px-6 py-5 border-b border-slate-100 border-l-4 border-l-blue-600">
+                  <h2 className="text-lg font-semibold text-slate-900 tracking-tight">Scan Barcode</h2>
                   <p className="text-sm text-slate-500 mt-0.5">Upload or capture the product barcode to identify it.</p>
               </div>
               <div className="p-6">
@@ -471,7 +479,7 @@ const ValidatorPage: React.FC = () => {
                     <button
                         type="submit"
                         disabled={status === ValidationStatus.LOADING || !imageFile}
-                        className="w-full flex justify-center items-center gap-2 bg-blue-600 text-white py-2.5 rounded-lg text-sm font-semibold shadow-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                        className="w-full flex justify-center items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-lg shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {status === ValidationStatus.LOADING ? <><Spinner /> Identifying…</> : 'Find Product by Barcode'}
                     </button>
@@ -482,9 +490,9 @@ const ValidatorPage: React.FC = () => {
 
         {/* ── Step 1b: Market Select ───────────────────────── */}
         {step === 'market_select' && (
-            <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden animate-slide-up">
-                <div className="px-6 py-5 border-b border-slate-100">
-                    <h2 className="text-lg font-bold text-slate-900">Multiple Markets Found</h2>
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden animate-slide-up">
+                <div className="px-6 py-5 border-b border-slate-100 border-l-4 border-l-blue-600">
+                    <h2 className="text-lg font-semibold text-slate-900 tracking-tight">Multiple Markets Found</h2>
                     <p className="text-sm text-slate-500 mt-0.5">The barcode matches products for more than one market. Select the correct one.</p>
                 </div>
                 <div className="p-6 space-y-3">
@@ -492,10 +500,10 @@ const ValidatorPage: React.FC = () => {
                         <button
                             key={product.id}
                             onClick={() => handleMarketSelect(product)}
-                            className="w-full text-left p-4 border border-slate-200 rounded-xl hover:border-blue-400 hover:bg-blue-50/40 transition group"
+                            className="w-full text-left p-4 border border-slate-200 rounded-xl hover:border-blue-500 hover:bg-blue-50/40 hover:shadow-sm transition-all group"
                         >
-                            <p className="font-semibold text-slate-800 group-hover:text-blue-700">{product.productName}</p>
-                            <span className="inline-block mt-1.5 text-xs font-bold uppercase tracking-wide bg-blue-600 text-white px-2 py-0.5 rounded">
+                            <p className="font-semibold text-slate-800 group-hover:text-blue-700 transition-colors">{product.productName}</p>
+                            <span className="inline-block mt-1.5 text-[10px] font-bold uppercase tracking-wide bg-blue-600 text-white px-2 py-0.5 rounded">
                                 {product.marketType} Market
                             </span>
                         </button>
@@ -506,12 +514,12 @@ const ValidatorPage: React.FC = () => {
 
         {/* ── Step 2: Batch ────────────────────────────────── */}
         {step === 'batch' && foundProduct && (
-            <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden animate-slide-up">
-                <div className="px-6 py-5 border-b border-slate-100">
-                    <h2 className="text-lg font-bold text-slate-900">Validate Batch Code</h2>
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden animate-slide-up">
+                <div className="px-6 py-5 border-b border-slate-100 border-l-4 border-l-blue-600">
+                    <h2 className="text-lg font-semibold text-slate-900 tracking-tight">Validate Batch Code</h2>
                     <p className="text-sm text-slate-500 mt-0.5">
                         Product: <span className="font-semibold text-slate-700">{foundProduct.productName}</span>
-                        <span className="ml-2 text-xs font-semibold uppercase bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">{foundProduct.marketType}</span>
+                        <span className="ml-2 text-[10px] font-bold uppercase tracking-wide bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">{foundProduct.marketType}</span>
                     </p>
                 </div>
                 <div className="p-6 space-y-5">
@@ -519,21 +527,21 @@ const ValidatorPage: React.FC = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         {barcodeImageUrl && (
                             <div className="sm:col-span-1">
-                                <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-2">Step 1 Image</p>
+                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Step 1 Image</p>
                                 <div className="bg-slate-50 border border-slate-200 rounded-lg p-2 flex items-center justify-center min-h-[80px]">
                                     <img src={barcodeImageUrl} alt="Barcode Scan" className="max-h-24 object-contain rounded" />
                                 </div>
                             </div>
                         )}
                         <div className={barcodeImageUrl ? 'sm:col-span-2' : 'sm:col-span-3'}>
-                            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-2">Expected Batch Format</p>
+                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Expected Batch Format</p>
                             <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 min-h-[80px] flex flex-col justify-center">
                                 <pre className="whitespace-pre-wrap text-slate-800 text-sm font-mono leading-relaxed">
                                     {foundProduct.batchInfoText || 'No reference text available.'}
                                 </pre>
                                 <div className="mt-2 pt-2 border-t border-slate-200">
-                                    <span className="text-xs font-semibold text-blue-800">Format: </span>
-                                    <code className="text-xs font-mono bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">{foundProduct.batchNumberFormat}</code>
+                                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide mr-1">Format</span>
+                                    <code className="font-mono text-sm bg-slate-100 text-slate-800 px-2 py-0.5 rounded">{foundProduct.batchNumberFormat}</code>
                                 </div>
                             </div>
                         </div>
@@ -542,7 +550,7 @@ const ValidatorPage: React.FC = () => {
                     {/* Upload */}
                     <form onSubmit={handleBatchSubmit} className="space-y-5">
                         <div>
-                            <p className="text-sm font-semibold text-slate-700 mb-2">Batch Code Image</p>
+                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Batch Code Image</p>
                             <ImageUploader
                                 id="batch-file-upload"
                                 imageUrl={imageUrl}
@@ -565,14 +573,14 @@ const ValidatorPage: React.FC = () => {
                             <button
                                 type="button"
                                 onClick={resetState}
-                                className="w-1/3 flex justify-center items-center bg-slate-100 text-slate-700 py-2.5 rounded-lg text-sm font-semibold hover:bg-slate-200 transition"
+                                className="w-1/3 flex justify-center items-center bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm px-4 py-2.5 rounded-lg border border-slate-200 transition-colors"
                             >
                                 Start Over
                             </button>
                             <button
                                 type="submit"
                                 disabled={status === ValidationStatus.LOADING || !imageFile}
-                                className="w-2/3 flex justify-center items-center gap-2 bg-blue-600 text-white py-2.5 rounded-lg text-sm font-semibold shadow-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                                className="w-2/3 flex justify-center items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-lg shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {status === ValidationStatus.LOADING ? <><Spinner /> Validating…</> : 'Validate Batch Code'}
                             </button>

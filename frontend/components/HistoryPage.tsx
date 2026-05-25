@@ -58,10 +58,12 @@ const ImageModal: React.FC<{ isOpen: boolean; onClose: () => void; imageUrl: str
 };
 
 const StatusBadge: React.FC<{ isValid: boolean }> = ({ isValid }) => (
-  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide ${
-    isValid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide border ${
+    isValid
+      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+      : 'bg-red-50 text-red-700 border-red-200'
   }`}>
-    <span className={`h-1.5 w-1.5 rounded-full ${isValid ? 'bg-green-500' : 'bg-red-500'}`} />
+    <span className={`h-1.5 w-1.5 rounded-full ${isValid ? 'bg-emerald-500' : 'bg-red-500'}`} />
     {isValid ? 'Valid' : 'Invalid'}
   </span>
 );
@@ -74,9 +76,11 @@ const HistoryCard: React.FC<{ record: ValidationRecord; username?: string }> = (
     <>
       <ImageModal isOpen={!!imageModalUrl} onClose={() => setImageModalUrl(null)} imageUrl={imageModalUrl} />
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden flex flex-col sm:flex-row hover:shadow-card-lg transition-shadow duration-200">
+      <div className={`bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col sm:flex-row hover:shadow-md transition-shadow duration-200 border-l-4 ${
+        record.isValid ? 'border-l-emerald-500' : 'border-l-red-400'
+      }`}>
         {/* Thumbnail column */}
-        <div className="sm:w-28 flex-shrink-0 bg-slate-50 border-b sm:border-b-0 sm:border-r border-slate-100 flex flex-row sm:flex-col">
+        <div className="sm:w-28 min-h-[96px] flex-shrink-0 bg-slate-50 border-b sm:border-b-0 sm:border-r border-slate-100 flex flex-row sm:flex-col">
           {hasImages ? (
             <>
               {record.barcodeImageUrl && (
@@ -86,7 +90,7 @@ const HistoryCard: React.FC<{ record: ValidationRecord; username?: string }> = (
                   aria-label="View barcode image"
                 >
                   <img src={record.barcodeImageUrl} className="absolute inset-0 w-full h-full object-cover transition-transform duration-200 group-hover:scale-105" alt="Barcode scan" />
-                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition" />
+                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors duration-200" />
                   <span className="absolute bottom-1 left-1 text-[9px] font-bold text-white bg-black/60 px-1 py-0.5 rounded">Barcode</span>
                 </button>
               )}
@@ -97,7 +101,7 @@ const HistoryCard: React.FC<{ record: ValidationRecord; username?: string }> = (
                   aria-label="View batch code image"
                 >
                   <img src={record.batchImageUrl} className="absolute inset-0 w-full h-full object-cover transition-transform duration-200 group-hover:scale-105" alt="Batch scan" />
-                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition" />
+                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors duration-200" />
                   <span className="absolute bottom-1 left-1 text-[9px] font-bold text-white bg-black/60 px-1 py-0.5 rounded">Batch</span>
                 </button>
               )}
@@ -172,9 +176,9 @@ const HistoryPage: React.FC = () => {
       />
     )}
     <div className="max-w-7xl mx-auto space-y-6">
-      <div className="bg-white border border-slate-200 rounded-xl shadow-card px-6 py-5 flex items-start justify-between gap-4">
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm px-6 py-5 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
             {user?.role === 'admin' ? 'Global Validation History' : 'My Validation History'}
           </h1>
           <p className="mt-1 text-sm text-slate-500">
@@ -186,7 +190,7 @@ const HistoryPage: React.FC = () => {
         {user?.role === 'admin' && history.length > 0 && (
           <button
             onClick={() => setShowClearConfirm(true)}
-            className="flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition"
+            className="flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -197,7 +201,7 @@ const HistoryPage: React.FC = () => {
       </div>
 
       {history.length === 0 ? (
-        <div className="bg-white border border-slate-200 rounded-xl shadow-card px-6 py-16 text-center">
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm px-6 py-16 text-center">
           <div className="h-14 w-14 rounded-xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
             <svg className="h-7 w-7 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />

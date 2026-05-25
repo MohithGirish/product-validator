@@ -320,49 +320,66 @@ export const ProductFormModal: React.FC<{
 
     const renderBarcodeScanner = () => (
         <form onSubmit={handleBarcodeSubmit} className="p-6 sm:p-8 max-h-[90vh] overflow-y-auto hide-scrollbar">
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">{getModalTitle()}</h2>
-            <p className="text-sm text-gray-500 mb-6">Scan the product barcode to begin.</p>
-            <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition"><XIcon /></button>
-            
-            <div 
-                className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md cursor-pointer hover:border-blue-500 transition"
+            <div className="mb-6">
+                <h2 className="text-lg font-semibold text-slate-900 tracking-tight">{getModalTitle()}</h2>
+                <p className="text-sm text-slate-500 mt-1">Scan the product barcode to begin.</p>
+            </div>
+            <button type="button" onClick={onClose} className="absolute top-4 right-4 h-8 w-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors" aria-label="Close"><XIcon /></button>
+
+            <div
+                className="flex justify-center items-center px-6 py-10 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-200 group border-slate-300 hover:border-blue-500 hover:bg-blue-50/40"
                 onClick={() => barcodeFileInputRef.current?.click()}
             >
-                <div className="space-y-1 text-center">
+                <div className="text-center flex flex-col items-center justify-center">
                     {barcodeImageUrl ? (
-                        <img src={barcodeImageUrl} alt="Barcode Preview" className="mx-auto h-48 w-auto rounded-md object-contain" />
+                        <img src={barcodeImageUrl} alt="Barcode Preview" className="mx-auto h-44 w-auto rounded-lg object-contain" />
                     ) : (
                         <>
-                            <UploadIcon />
-                            <div className="flex text-sm text-gray-600"><p className="pl-1">Upload Barcode Image</p></div>
-                            <p className="text-xs text-gray-500">PNG, JPG up to 4MB</p>
+                            <div className="h-14 w-14 rounded-xl bg-slate-100 group-hover:bg-blue-100 flex items-center justify-center mb-3 transition-colors">
+                                <span className="text-slate-500 group-hover:text-blue-600 transition-colors scale-125">
+                                    <UploadIcon />
+                                </span>
+                            </div>
+                            <p className="text-sm font-semibold text-slate-700">Upload barcode image</p>
+                            <p className="text-xs text-slate-400 mt-1">PNG, JPG up to 4 MB</p>
                         </>
                     )}
                 </div>
             </div>
             <input id="barcode-file-upload" type="file" className="sr-only" ref={barcodeFileInputRef} onChange={handleBarcodeFileChange} accept="image/*"/>
-            
+
             {barcodeImageFile && (
-                <div className="mt-4 flex items-center justify-between bg-gray-50 p-3 rounded-md">
-                    <p className="text-sm font-medium text-gray-700 truncate">{barcodeImageFile.name}</p>
-                    <button type="button" onClick={resetBarcodeStepState} className="ml-4 text-red-500 hover:text-red-700"><XCircleIcon className="w-5 h-5"/></button>
+                <div className="mt-4 flex items-center justify-between bg-slate-50 border border-slate-200 px-3 py-2.5 rounded-lg">
+                    <p className="text-sm font-medium text-slate-700 truncate">{barcodeImageFile.name}</p>
+                    <button type="button" onClick={resetBarcodeStepState} className="ml-4 text-slate-400 hover:text-red-500 transition-colors" aria-label="Remove image"><XCircleIcon className="w-5 h-5"/></button>
                 </div>
             )}
 
-            <div className="mt-4 flex items-center">
-                <span className="flex-grow border-t border-gray-300"></span>
-                <span className="mx-4 text-gray-500 text-sm font-semibold">OR</span>
-                <span className="flex-grow border-t border-gray-300"></span>
+            <div className="mt-4 flex items-center gap-3">
+                <span className="flex-1 border-t border-slate-200"></span>
+                <span className="text-xs font-semibold text-slate-400">OR</span>
+                <span className="flex-1 border-t border-slate-200"></span>
             </div>
-            <button type="button" onClick={() => { setCameraTarget('barcode'); setIsCameraOpen(true); }} className="w-full mt-4 flex justify-center items-center bg-gray-600 text-white p-3 rounded-lg font-semibold shadow-md hover:bg-gray-700 transition">
-                <CameraIcon className="w-5 h-5 mr-2" /> Use Camera
+            <button
+                type="button"
+                onClick={() => { setCameraTarget('barcode'); setIsCameraOpen(true); }}
+                className="w-full mt-4 flex justify-center items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm px-4 py-2.5 rounded-lg transition-colors shadow-sm"
+            >
+                <CameraIcon className="w-4 h-4" /> Use Camera
             </button>
-            
-            {barcodeScanStatus === 'error' && <div className="text-sm text-red-600 mt-4 text-center">{barcodeScanError}</div>}
-            
-            <div className="mt-8 flex justify-end space-x-3 border-t pt-6">
-                <button type="button" onClick={onClose} className="px-5 py-2.5 bg-gray-200 rounded-lg text-sm font-semibold text-gray-800 hover:bg-gray-300 transition">Cancel</button>
-                <button type="submit" disabled={barcodeScanStatus === 'loading' || !barcodeImageFile} className="px-5 py-2.5 bg-blue-600 rounded-lg text-sm font-semibold text-white hover:bg-blue-700 transition flex items-center disabled:bg-blue-300">
+
+            {barcodeScanStatus === 'error' && (
+                <div className="mt-4 flex items-start gap-2.5 rounded-lg bg-red-50 border border-red-200 p-3" role="alert">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <p className="text-sm text-red-700">{barcodeScanError}</p>
+                </div>
+            )}
+
+            <div className="mt-8 flex justify-end gap-3 border-t border-slate-100 pt-6">
+                <button type="button" onClick={onClose} className="bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm px-4 py-2.5 rounded-lg border border-slate-200 transition-colors">Cancel</button>
+                <button type="submit" disabled={barcodeScanStatus === 'loading' || !barcodeImageFile} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-lg shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                     {barcodeScanStatus === 'loading' && <Spinner/>} Next: Add Details
                 </button>
             </div>
@@ -371,23 +388,26 @@ export const ProductFormModal: React.FC<{
 
     const renderDetailsForm = () => (
         <form onSubmit={handleSubmit} className="p-6 sm:p-8 max-h-[90vh] overflow-y-auto hide-scrollbar">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">{getModalTitle()}</h2>
-            <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition"><XIcon /></button>
-            
-            <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="mb-6">
+                <h2 className="text-lg font-semibold text-slate-900 tracking-tight">{getModalTitle()}</h2>
+                <p className="text-sm text-slate-500 mt-1">Configure product metadata, batch format, and shelf-life.</p>
+            </div>
+            <button type="button" onClick={onClose} className="absolute top-4 right-4 h-8 w-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors" aria-label="Close"><XIcon /></button>
+
+            <div className="space-y-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                         <label className="block text-sm font-bold text-gray-700 mb-1">Product Name</label>
-                         <input name="productName" value={formData.productName} onChange={handleChange} placeholder="e.g., Dark Fantasy Choco Fills" className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition" required />
+                         <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Product Name</label>
+                         <input name="productName" value={formData.productName} onChange={handleChange} placeholder="e.g., Dark Fantasy Choco Fills" className="w-full px-3 py-2.5 bg-white text-sm text-slate-900 placeholder-slate-400 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" required />
                     </div>
                      <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-1">Market Type</label>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Market Type</label>
                         <div className="relative">
-                            <select name="marketType" value={formData.marketType} onChange={handleChange} className="w-full px-3 py-2 bg-gray-100 border border-gray-300 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition appearance-none pr-8">
+                            <select name="marketType" value={formData.marketType} onChange={handleChange} className="w-full px-3 py-2.5 bg-white border border-slate-200 text-sm text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition appearance-none pr-8">
                                 <option value="general">General Market</option>
                                 <option value="modern">Modern Market</option>
                             </select>
-                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
                                 <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
                             </div>
                         </div>
@@ -395,121 +415,140 @@ export const ProductFormModal: React.FC<{
                 </div>
 
                 <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Barcode</label>
-                    <input name="barcode" value={formData.barcode} onChange={handleChange} placeholder="Scan or enter barcode" className="w-full px-3 py-2 bg-gray-100 text-gray-900 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition" required readOnly={!!initialBarcode} />
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Barcode</label>
+                    <input name="barcode" value={formData.barcode} onChange={handleChange} placeholder="Scan or enter barcode" className={`w-full px-3 py-2.5 text-sm font-mono text-slate-900 placeholder-slate-400 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${initialBarcode ? 'bg-slate-50' : 'bg-white'}`} required readOnly={!!initialBarcode} />
                 </div>
 
                 {product?.batchInfoText && (
-                    <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                        <h4 className="text-sm font-bold text-gray-600 mb-2 text-center uppercase tracking-wider">Expected Information Block</h4>
-                        <div className="whitespace-pre-wrap text-left text-gray-800 text-sm font-mono bg-white p-3 rounded border border-gray-300 max-h-40 overflow-y-auto">
+                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                        <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 text-center">Expected Information Block</h4>
+                        <div className="whitespace-pre-wrap text-left text-slate-800 text-sm font-mono bg-white p-3 rounded-lg border border-slate-200 max-h-40 overflow-y-auto">
                             {generalizedBatchInfoBlock(product.batchInfoText || '').split('\n').map((line, index) => <div key={index}>{line}</div>)}
                         </div>
                         <div className="mt-3 text-center">
-                            <p className="text-xs text-gray-500">This is the generalized reference format currently in the database.</p>
+                            <p className="text-xs text-slate-500">Generalized reference format currently in the database.</p>
                             {product.batchNumberFormat && (
-                                <p className="mt-1 text-sm font-semibold text-blue-800">
-                                    Current Saved Format: <span className="font-mono bg-blue-100 px-1.5 py-0.5 rounded">{product.batchNumberFormat}</span>
+                                <p className="mt-1.5 text-xs text-slate-600">
+                                    <span className="font-semibold text-slate-700">Saved format:</span> <span className="font-mono text-sm bg-slate-100 text-slate-800 px-2 py-0.5 rounded">{product.batchNumberFormat}</span>
                                 </p>
                             )}
                         </div>
                     </div>
                 )}
 
-                <div className="border-t pt-6">
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Batch Code Format</label>
-                    <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                        <div className="space-y-1 text-center w-full">
+                {/* Batch format inference — visually distinct slate-50 section */}
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 space-y-4">
+                    <div className="flex items-start justify-between gap-3">
+                        <div>
+                            <h3 className="text-sm font-semibold text-slate-900">Batch Code Format</h3>
+                            <p className="text-xs text-slate-500 mt-0.5">Upload a batch image to auto-infer format, MRP, and shelf-life.</p>
+                        </div>
+                        <span className="text-[10px] font-bold uppercase tracking-wide bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded">Auto</span>
+                    </div>
+
+                    <div className="flex justify-center items-center px-6 py-8 border-2 border-dashed border-slate-300 hover:border-blue-500 rounded-xl bg-white transition-colors">
+                        <div className="text-center flex flex-col items-center justify-center w-full">
                             {batchFormatImageUrl ? (
-                                <img src={batchFormatImageUrl} alt="Batch Preview" className="mx-auto h-32 w-auto rounded-md object-contain" />
+                                <img src={batchFormatImageUrl} alt="Batch Preview" className="mx-auto h-32 w-auto rounded-lg object-contain mb-3" />
                             ) : (
-                                <UploadIcon />
+                                <div className="h-12 w-12 rounded-xl bg-slate-100 flex items-center justify-center mb-3">
+                                    <span className="text-slate-500 scale-110"><UploadIcon /></span>
+                                </div>
                             )}
                             {batchScanStatus === 'loading' ? (
-                                <div className="flex justify-center items-center h-12">
-                                    <Spinner /> <span className="ml-2 text-sm text-gray-500">Analyzing...</span>
+                                <div className="flex justify-center items-center h-12 text-blue-600">
+                                    <Spinner /> <span className="ml-1 text-sm font-medium text-slate-600">Analyzing…</span>
                                 </div>
                             ) : (
-                                <div className="flex text-sm text-gray-600 justify-center">
-                                    <label htmlFor="batch-format-file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
+                                <div className="flex text-sm text-slate-600 justify-center items-center gap-1">
+                                    <label htmlFor="batch-format-file-upload" className="relative cursor-pointer font-semibold text-blue-600 hover:text-blue-700 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500 rounded">
                                         <span>Upload an image</span>
                                         <input id="batch-format-file-upload" name="batch-format-file-upload" type="file" className="sr-only" ref={batchFileInputRef} onChange={handleBatchFormatFileChange} accept="image/*" />
                                     </label>
-                                    <p className="pl-1">or use</p>
-                                    <button type="button" onClick={() => { setCameraTarget('batchFormat'); setIsCameraOpen(true); }} className="ml-1 bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none">camera</button>
+                                    <span className="text-slate-400">or use</span>
+                                    <button type="button" onClick={() => { setCameraTarget('batchFormat'); setIsCameraOpen(true); }} className="font-semibold text-blue-600 hover:text-blue-700 focus:outline-none">camera</button>
                                 </div>
                             )}
-                            <p className="text-xs text-gray-500">to infer format, MRP, and shelf life</p>
+                            <p className="text-xs text-slate-400 mt-1">PNG, JPG up to 4 MB</p>
                         </div>
                     </div>
+
                     {batchFormatImageFile && (
-                        <div className="mt-4 flex items-center justify-between bg-gray-50 p-3 rounded-md">
-                            <p className="text-sm font-medium text-gray-700 truncate">{batchFormatImageFile.name}</p>
-                            <button type="button" onClick={resetBatchStepState} className="ml-4 text-red-500 hover:text-red-700"><XCircleIcon className="w-5 h-5"/></button>
+                        <div className="flex items-center justify-between bg-white border border-slate-200 px-3 py-2.5 rounded-lg">
+                            <p className="text-sm font-medium text-slate-700 truncate">{batchFormatImageFile.name}</p>
+                            <button type="button" onClick={resetBatchStepState} className="ml-4 text-slate-400 hover:text-red-500 transition-colors" aria-label="Remove image"><XCircleIcon className="w-5 h-5"/></button>
                         </div>
                     )}
-                    {batchScanStatus === 'error' && <div className="text-sm text-red-600 mt-2 text-center">{batchScanError}</div>}
+
+                    {batchScanStatus === 'error' && (
+                        <div className="flex items-start gap-2.5 rounded-lg bg-red-50 border border-red-200 p-3" role="alert">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <p className="text-sm text-red-700">{batchScanError}</p>
+                        </div>
+                    )}
+
+                    {formData.batchNumberFormat && (
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Editable Format (click to change)</label>
+                            <div className="flex flex-wrap gap-1 bg-white p-2.5 border border-slate-200 rounded-lg">
+                                {formData.batchNumberFormat.split('').map((char, index) => (
+                                    <div key={index} className="relative">
+                                        <button
+                                            type="button"
+                                            title={char === '#' ? 'Variable Number' : char === '@' ? 'Variable Alphabet' : `Fixed character: ${char}`}
+                                            onClick={() => handleFormatCharClick(index)}
+                                            className={`w-8 h-8 flex items-center justify-center font-mono text-lg rounded transition-colors ${
+                                                activeEditorIndex === index
+                                                    ? 'bg-amber-400 text-slate-900 ring-2 ring-amber-500'
+                                                    : 'bg-slate-100 text-slate-800 hover:bg-slate-200'
+                                            }`}
+                                        >
+                                            {char}
+                                        </button>
+                                        {activeEditorIndex === index && (
+                                            <div ref={editorRef} className="absolute top-full mt-2 z-20 bg-white shadow-xl rounded-xl border border-slate-200 p-3 w-52 animate-fade-in">
+                                                <p className="text-xs font-semibold text-slate-700 mb-2 text-center">Change Character</p>
+                                                <div className="flex justify-around mb-2 gap-2">
+                                                    <button type="button" onClick={() => handleFormatChange('#')} className="flex-1 h-10 rounded-lg bg-blue-600 text-white font-mono text-xl hover:bg-blue-700 transition-colors">#</button>
+                                                    <button type="button" onClick={() => handleFormatChange('@')} className="flex-1 h-10 rounded-lg bg-slate-700 text-white font-mono text-xl hover:bg-slate-800 transition-colors">@</button>
+                                                </div>
+                                                <label className="text-xs font-medium text-slate-500">Or enter a fixed character:</label>
+                                                <input
+                                                    type="text"
+                                                    maxLength={1}
+                                                    onKeyDown={(e) => { if(e.key === "Enter") { e.preventDefault(); handleFormatChange(e.currentTarget.value) }}}
+                                                    onChange={(e) => handleFormatChange(e.currentTarget.value)}
+                                                    className="w-full text-center mt-1 px-2 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    autoFocus
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
-                {formData.batchNumberFormat && (
-                    <div className="mt-4">
-                        <label className="block text-xs font-medium text-gray-500 mb-2">EDITABLE FORMAT (CLICK TO CHANGE)</label>
-                        <div className="flex flex-wrap gap-1 bg-white p-2 border rounded-lg">
-                            {formData.batchNumberFormat.split('').map((char, index) => (
-                                <div key={index} className="relative">
-                                    <button 
-                                        type="button"
-                                        title={char === '#' ? 'Variable Number' : char === '@' ? 'Variable Alphabet' : `Fixed character: ${char}`}
-                                        onClick={() => handleFormatCharClick(index)} 
-                                        className={`w-8 h-8 flex items-center justify-center font-mono text-lg rounded transition ${
-                                            activeEditorIndex === index 
-                                                ? 'bg-yellow-400 text-black ring-2 ring-yellow-600' 
-                                                : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                                        }`}
-                                    >
-                                        {char}
-                                    </button>
-                                    {activeEditorIndex === index && (
-                                        <div ref={editorRef} className="absolute top-full mt-2 z-20 bg-white shadow-lg rounded-lg border p-3 w-48 animate-fade-in">
-                                            <p className="text-xs font-bold mb-2 text-center">Change Character</p>
-                                            <div className="flex justify-around mb-2">
-                                                <button type="button" onClick={() => handleFormatChange('#')} className="w-10 h-10 rounded bg-blue-500 text-white font-mono text-xl hover:bg-blue-600">#</button>
-                                                <button type="button" onClick={() => handleFormatChange('@')} className="w-10 h-10 rounded bg-purple-500 text-white font-mono text-xl hover:bg-purple-600">@</button>
-                                            </div>
-                                            <label className="text-xs font-medium text-gray-600">Or enter a fixed character:</label>
-                                             <input 
-                                                type="text"
-                                                maxLength={1}
-                                                onKeyDown={(e) => { if(e.key === "Enter") { e.preventDefault(); handleFormatChange(e.currentTarget.value) }}}
-                                                onChange={(e) => handleFormatChange(e.currentTarget.value)}
-                                                className="w-full text-center mt-1 p-1 border rounded"
-                                                autoFocus
-                                            />
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                <div className="border-t pt-6 mt-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="border-t border-slate-100 pt-5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div>
-                            <label className="flex items-center space-x-3 cursor-pointer">
+                            <label className="flex items-center space-x-3 cursor-pointer h-full">
                                 <input
                                     type="checkbox"
                                     name="mrpApplicable"
                                     checked={formData.mrpApplicable}
                                     onChange={handleChange}
-                                    className="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                                 />
-                                <span className="text-sm font-bold text-gray-700">MRP Applicable</span>
+                                <span className="text-sm font-semibold text-slate-700">MRP Applicable</span>
                             </label>
                         </div>
                         {formData.mrpApplicable && (
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">MRP (₹)</label>
+                                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">MRP (₹)</label>
                                 <input
                                     name="mrp"
                                     type="number"
@@ -517,38 +556,38 @@ export const ProductFormModal: React.FC<{
                                     onChange={handleChange}
                                     placeholder="e.g., 45.00"
                                     step="0.01"
-                                    className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                                    className="w-full px-3 py-2.5 bg-white text-sm text-slate-900 placeholder-slate-400 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                                 />
                             </div>
                         )}
                     </div>
                 </div>
-                <div className="mt-6">
+                <div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">Shelf Life</label>
+                            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Shelf Life</label>
                             <input
                                 name="shelfLife"
                                 type="number"
                                 value={formData.shelfLife ?? ''}
                                 onChange={handleChange}
                                 placeholder="e.g., 180"
-                                className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                                className="w-full px-3 py-2.5 bg-white text-sm text-slate-900 placeholder-slate-400 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">Unit</label>
+                            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Unit</label>
                             <div className="relative">
                                 <select
                                     name="shelfLifeUnit"
                                     value={formData.shelfLifeUnit ?? 'days'}
                                     onChange={handleChange}
-                                    className="w-full px-3 py-2 bg-gray-100 border border-gray-300 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition appearance-none pr-8"
+                                    className="w-full px-3 py-2.5 bg-white border border-slate-200 text-sm text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition appearance-none pr-8"
                                 >
                                     <option value="days">Days</option>
                                     <option value="months">Months</option>
                                 </select>
-                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
                                     <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
                                 </div>
                             </div>
@@ -556,19 +595,19 @@ export const ProductFormModal: React.FC<{
                     </div>
                 </div>
             </div>
-            <div className="mt-8 flex justify-end space-x-3 border-t pt-6 bg-gray-50 -mx-6 -mb-8 px-6 py-4 rounded-b-xl sm:-mx-8 sm:-mb-8 sm:px-8">
-                <button type="button" onClick={onClose} className="px-5 py-2.5 bg-gray-200 rounded-lg text-sm font-semibold text-gray-800 hover:bg-gray-300 transition">Cancel</button>
-                <button type="submit" className="px-5 py-2.5 bg-blue-600 rounded-lg text-sm font-semibold text-white hover:bg-blue-700 transition">Save Product</button>
+            <div className="mt-8 flex justify-end gap-3 border-t border-slate-100 bg-slate-50 -mx-6 -mb-6 px-6 py-4 rounded-b-xl sm:-mx-8 sm:-mb-8 sm:px-8 sm:py-5">
+                <button type="button" onClick={onClose} className="bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm px-4 py-2.5 rounded-lg border border-slate-200 transition-colors">Cancel</button>
+                <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-lg shadow-sm transition-colors">Save Product</button>
             </div>
         </form>
     );
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-40 p-4 animate-fade-in" onClick={onClose}>
-            <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-40 p-4 animate-fade-in" onClick={onClose}>
+            <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl animate-slide-up" onClick={(e) => e.stopPropagation()}>
                 {step === 'barcode' ? renderBarcodeScanner() : renderDetailsForm()}
             </div>
-            <CameraModal 
+            <CameraModal
                 isOpen={isCameraOpen}
                 onClose={() => setIsCameraOpen(false)}
                 onCapture={handleCameraCapture}
@@ -585,40 +624,42 @@ const DeleteConfirmationModal: React.FC<{
 }> = ({ isOpen, onClose, onConfirm, product }) => {
     if (!isOpen || !product) return null;
 
-    const AlertIcon = () => (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-red-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-        </svg>
-    );
-
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4 animate-fade-in" onClick={onClose}>
-            <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-                <div className="p-6 sm:p-8">
-                    <AlertIcon />
-                    <h2 className="text-xl font-bold text-gray-800 text-center mt-4">Confirm Deletion</h2>
-                    <p className="text-sm text-gray-500 text-center mt-2">Are you sure you want to permanently delete this product? This action cannot be undone.</p>
-                    
-                    <div className="mt-6 bg-gray-50 p-4 rounded-lg border border-gray-200 text-sm space-y-2">
-                        <div className="flex justify-between">
-                            <span className="font-semibold text-gray-600">Product:</span>
-                            <span className="font-bold text-gray-800 text-right">{product.productName}</span>
+        <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 p-4 animate-fade-in" onClick={onClose}>
+            <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md animate-slide-up" onClick={(e) => e.stopPropagation()}>
+                <div className="p-6 sm:p-7">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="h-12 w-12 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0 ring-4 ring-red-50/60">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
                         </div>
-                        <div className="flex justify-between">
-                            <span className="font-semibold text-gray-600">Barcode:</span>
-                            <span className="font-mono text-gray-800">{product.barcode}</span>
-                        </div>
-                         <div className="flex justify-between">
-                            <span className="font-semibold text-gray-600">Market:</span>
-                            <span className="capitalize text-gray-800">{product.marketType}</span>
+                        <div>
+                            <h2 className="text-lg font-semibold text-slate-900 tracking-tight">Delete product?</h2>
+                            <p className="text-sm text-slate-500 mt-0.5">This action cannot be undone.</p>
                         </div>
                     </div>
-                    
-                    <div className="mt-8 flex justify-end space-x-3">
-                        <button onClick={onClose} className="px-5 py-2.5 bg-gray-200 rounded-lg text-sm font-semibold text-gray-800 hover:bg-gray-300 transition">
+
+                    <div className="mt-4 bg-slate-50 p-4 rounded-xl border border-slate-200 text-sm space-y-2.5">
+                        <div className="flex justify-between gap-3">
+                            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Product</span>
+                            <span className="font-semibold text-slate-800 text-right truncate">{product.productName}</span>
+                        </div>
+                        <div className="flex justify-between gap-3">
+                            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Barcode</span>
+                            <span className="font-mono text-xs bg-slate-100 text-slate-800 px-2 py-0.5 rounded">{product.barcode}</span>
+                        </div>
+                        <div className="flex justify-between gap-3">
+                            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Market</span>
+                            <span className="capitalize text-slate-800 font-medium">{product.marketType}</span>
+                        </div>
+                    </div>
+
+                    <div className="mt-6 flex justify-end gap-3">
+                        <button onClick={onClose} className="bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm px-4 py-2.5 rounded-lg border border-slate-200 transition-colors">
                             Cancel
                         </button>
-                        <button onClick={onConfirm} className="px-5 py-2.5 bg-red-600 rounded-lg text-sm font-semibold text-white hover:bg-red-700 transition">
+                        <button onClick={onConfirm} className="bg-red-600 hover:bg-red-700 text-white font-semibold text-sm px-4 py-2.5 rounded-lg shadow-sm transition-colors">
                             Delete Product
                         </button>
                     </div>
@@ -715,23 +756,23 @@ const DatabasePage: React.FC = () => {
             />
 
             {/* Header */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-card px-6 py-5">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-6 py-5">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-900">Product Database</h1>
+                        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Product Database</h1>
                         <p className="mt-1 text-sm text-slate-500">Manage all products in the master database.</p>
                     </div>
                     {user?.role === 'admin' && (
                         <div className="flex gap-2 flex-shrink-0">
                             <button
                                 onClick={handleDownloadCSV}
-                                className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition"
+                                className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 transition-colors"
                             >
                                 <DownloadIcon className="w-4 h-4" /> Export CSV
                             </button>
                             <button
                                 onClick={() => handleOpenModal()}
-                                className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition shadow-sm"
+                                className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-sm"
                             >
                                 <PlusIcon className="w-4 h-4" /> Add Product
                             </button>
@@ -739,24 +780,25 @@ const DatabasePage: React.FC = () => {
                     )}
                 </div>
                 <div className="mt-4 relative">
-                    <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <SearchIcon className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                     <input
                         type="text"
                         placeholder="Search by product name or barcode…"
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     />
                 </div>
             </div>
 
             {/* Table */}
             {isLoading ? (
-                <div className="bg-white rounded-xl border border-slate-200 shadow-card px-6 py-16 text-center">
-                    <p className="text-sm text-slate-500">Loading products…</p>
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-6 py-16 flex flex-col items-center justify-center">
+                    <div className="text-blue-600"><Spinner /></div>
+                    <p className="mt-3 text-sm font-semibold text-slate-700">Loading products…</p>
                 </div>
             ) : (
-                <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm text-left">
                             <thead className="border-b border-slate-200 bg-slate-50">
@@ -774,32 +816,36 @@ const DatabasePage: React.FC = () => {
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {filteredProducts.map(p => (
-                                    <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                                    <tr key={p.id} className="group hover:bg-slate-50 transition-colors">
                                         <td className="px-5 py-4 font-semibold text-slate-900">{p.productName}</td>
-                                        <td className="px-5 py-4 font-mono text-slate-700 text-xs">{p.barcode}</td>
                                         <td className="px-5 py-4">
-                                            <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wide ${
+                                            <span className="font-mono text-xs bg-slate-100 text-slate-800 px-2 py-0.5 rounded">{p.barcode}</span>
+                                        </td>
+                                        <td className="px-5 py-4">
+                                            <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${
                                                 p.marketType === 'modern'
-                                                  ? 'bg-purple-100 text-purple-700'
-                                                  : 'bg-slate-100 text-slate-600'
+                                                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                                  : 'bg-slate-100 text-slate-600 border border-slate-200'
                                             }`}>{p.marketType}</span>
                                         </td>
-                                        <td className="px-5 py-4 font-mono text-slate-700 text-xs">{p.batchNumberFormat}</td>
-                                        <td className="px-5 py-4 text-slate-700">{p.mrpApplicable && p.mrp ? `₹${p.mrp.toFixed(2)}` : <span className="text-slate-400">N/A</span>}</td>
-                                        <td className="px-5 py-4 text-slate-700">{p.shelfLife && p.shelfLifeUnit ? `${p.shelfLife} ${p.shelfLifeUnit}` : <span className="text-slate-400">N/A</span>}</td>
+                                        <td className="px-5 py-4">
+                                            <span className="font-mono text-xs bg-slate-100 text-slate-800 px-2 py-0.5 rounded">{p.batchNumberFormat}</span>
+                                        </td>
+                                        <td className="px-5 py-4 text-slate-700">{p.mrpApplicable && p.mrp ? `₹${p.mrp.toFixed(2)}` : <span className="text-slate-400">—</span>}</td>
+                                        <td className="px-5 py-4 text-slate-700">{p.shelfLife && p.shelfLifeUnit ? `${p.shelfLife} ${p.shelfLifeUnit}` : <span className="text-slate-400">—</span>}</td>
                                         {user?.role === 'admin' && (
                                             <td className="px-5 py-4 text-right">
-                                                <div className="flex justify-end gap-1">
+                                                <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                                                     <button
                                                         onClick={() => handleOpenModal(p)}
-                                                        className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition"
+                                                        className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
                                                         aria-label="Edit product"
                                                     >
                                                         <PencilIcon className="w-4 h-4" />
                                                     </button>
                                                     <button
                                                         onClick={() => handleRequestDelete(p)}
-                                                        className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition"
+                                                        className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                                                         aria-label="Delete product"
                                                     >
                                                         <TrashIcon className="w-4 h-4" />
@@ -813,6 +859,9 @@ const DatabasePage: React.FC = () => {
                         </table>
                         {filteredProducts.length === 0 && (
                             <div className="px-6 py-16 text-center">
+                                <div className="h-14 w-14 rounded-xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                                    <SearchIcon className="h-7 w-7 text-slate-400" />
+                                </div>
                                 <p className="text-sm font-semibold text-slate-800">No products found</p>
                                 <p className="text-sm text-slate-400 mt-1">Try a different search term or add a new product.</p>
                             </div>
