@@ -27,7 +27,20 @@ const localOcr = require('./localOcr');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors({ origin: ['http://localhost:3000', 'http://localhost:3002', 'http://localhost:5173'] }));
+app.use(cors({
+  origin: (origin, cb) => {
+    const allowed = [
+      'http://localhost:3000',
+      'http://localhost:3002',
+      'http://localhost:5173',
+    ];
+    if (!origin || allowed.includes(origin) || /\.onrender\.com$/.test(origin)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Not allowed by CORS'));
+    }
+  }
+}));
 app.use(express.json());
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 4 * 1024 * 1024 } });
@@ -193,6 +206,12 @@ app.post('/api/analyze-image', upload.single('image'), async (req, res) => {
     res.status(500).json({ error: `OCR error: ${err.message}` });
   }
 });
+
+// ── Serve frontend static files ────────────────────────────────────────────
+
+const FRONTEND_DIST = path.join(__dirname, '../frontend/dist');
+app.use(express.static(FRONTEND_DIST));
+app.get('*', (_req, res) => res.sendFile(path.join(FRONTEND_DIST, 'index.html')));
 
 // ── Start ──────────────────────────────────────────────────────────────────
 
