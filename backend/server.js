@@ -27,19 +27,10 @@ const localOcr = require('./localOcr');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// In production the frontend is served from this same Express process (same origin),
+// so CORS headers are only needed for local development.
 app.use(cors({
-  origin: (origin, cb) => {
-    const allowed = [
-      'http://localhost:3000',
-      'http://localhost:3002',
-      'http://localhost:5173',
-    ];
-    if (!origin || allowed.includes(origin) || /\.onrender\.com$/.test(origin)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Not allowed by CORS'));
-    }
-  }
+  origin: process.env.NODE_ENV === 'production' ? false : true,
 }));
 app.use(express.json());
 
@@ -211,7 +202,7 @@ app.post('/api/analyze-image', upload.single('image'), async (req, res) => {
 
 const FRONTEND_DIST = path.join(__dirname, '../frontend/dist');
 app.use(express.static(FRONTEND_DIST));
-app.get('*', (_req, res) => res.sendFile(path.join(FRONTEND_DIST, 'index.html')));
+app.get(/^(?!\/api).*$/, (_req, res) => res.sendFile(path.join(FRONTEND_DIST, 'index.html')));
 
 // ── Start ──────────────────────────────────────────────────────────────────
 
