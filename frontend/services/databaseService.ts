@@ -128,23 +128,37 @@ initializeDatabase();
 // --- Public API for Database Service ---
 
 export const databaseService = {
-    // --- User Table ---
+    // --- Users (backend-managed) ---
     getUsers: async (): Promise<User[]> => {
-        if (GOOGLE_APPS_SCRIPT_URL) {
-            return await _fetchFromSheet<User>('db_users');
+        try {
+            return await _fetchFromBackend<User[]>('/api/users');
+        } catch (error) {
+            console.warn('Failed to fetch users from backend:', error);
+            return [];
         }
-        return Promise.resolve(_readTableLocal<User>('db_users'));
     },
-    
+
     findUserByUsernameAndPassword: async (username: string, password: string): Promise<User | null> => {
-        let users: User[] = [];
-        if (GOOGLE_APPS_SCRIPT_URL) {
-            users = await _fetchFromSheet<User>('db_users');
-        } else {
-            users = _readTableLocal<User>('db_users');
+        try {
+            return await _fetchFromBackend<User>('/api/auth/login', {
+                method: 'POST',
+                body: JSON.stringify({ username, password }),
+            });
+        } catch {
+            // 401 (wrong credentials) or backend unreachable — both surface as "login failed".
+            return null;
         }
-        const user = users.find(u => u.username === username && u.password === password);
-        return user || null;
+    },
+
+    addUser: async (newUser: { username: string; password: string; role: 'admin' | 'staff' }): Promise<User> => {
+        return await _fetchFromBackend<User>('/api/users', {
+            method: 'POST',
+            body: JSON.stringify(newUser),
+        });
+    },
+
+    deleteUser: async (userId: string): Promise<void> => {
+        await _fetchFromBackend<void>(`/api/users/${encodeURIComponent(userId)}`, { method: 'DELETE' });
     },
 
     // --- Product Table ---

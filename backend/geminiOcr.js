@@ -86,11 +86,12 @@ async function extractBatchInfo(buffer, mimeType, batchFormat) {
 2. The production/manufacturing/packed date (ISO format YYYY-MM-DD)
 3. The expiry/best-before/use-by date (ISO format YYYY-MM-DD)
 4. The MRP/price (include currency symbol, e.g. "Rs.90" or "₹440")
+5. All visible batch-related text exactly as printed, preserving line breaks (batchInfoText)
 
 ${formatHint}
 
 Respond ONLY with valid JSON in this exact format:
-{"batchCode": "16:47 01B11", "productionDate": "2025-09-27", "expiryDate": "2026-03-25", "price": "Rs.90"}
+{"batchCode": "16:47 01B11", "productionDate": "2025-09-27", "expiryDate": "2026-03-25", "price": "Rs.90", "batchInfoText": "Batch No.: 16:47 01B11\\nPKD.: 27/09/25\\nUse By.: 25/03/26\\nMRP Rs. 90.00"}
 
 If a field cannot be found, use an empty string "".
 Do not include any explanation, markdown, or extra text — just the JSON object.`;
@@ -103,6 +104,7 @@ Do not include any explanation, markdown, or extra text — just the JSON object
     productionDate: String(parsed.productionDate || ''),
     expiryDate: String(parsed.expiryDate || ''),
     price: String(parsed.price || ''),
+    batchInfoText: String(parsed.batchInfoText || ''),
   };
 }
 

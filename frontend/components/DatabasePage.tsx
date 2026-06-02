@@ -11,6 +11,7 @@ import { XIcon } from './icons/XIcon';
 import { SearchIcon } from './icons/SearchIcon';
 import CameraModal from './CameraModal';
 import Spinner from './common/Spinner';
+import { useToast } from './common/Toast';
 import { CameraIcon } from './icons/CameraIcon';
 import { UploadIcon } from './icons/UploadIcon';
 import { XCircleIcon } from './icons/XCircleIcon';
@@ -194,17 +195,38 @@ export const ProductFormModal: React.FC<{
         setBarcodeScanError(null);
         try {
             const result = await extractProductInfoFromImage(barcodeImageFile);
-            if (!result.barcode) throw new Error("Could not detect a barcode from the image.");
-
-            setFormData(prev => ({ ...prev, barcode: result.barcode, productName: result.productName }));
+            // Pre-fill whatever OCR found. A missing barcode is not fatal — the user
+            // can still type it in on the details step, so we always advance.
+            setFormData(prev => ({
+                ...prev,
+                barcode: result.barcode || prev.barcode,
+                productName: result.productName || prev.productName,
+            }));
             setStep('details');
+            setBarcodeScanStatus('idle');
             resetBarcodeStepState();
         } catch (err: any) {
-            setBarcodeScanError(err.message || "An error occurred during barcode validation.");
+            setBarcodeScanError(
+                `${err.message || 'Could not read the barcode.'} You can continue and enter it manually.`
+            );
             setBarcodeScanStatus('error');
-        } finally {
-            setBarcodeScanStatus('idle');
         }
+    };
+
+    // Always reach the details step, even without an image (manual entry).
+    const handleSkipToManualEntry = () => {
+        setStep('details');
+        setBarcodeScanStatus('idle');
+        setBarcodeScanError(null);
+        resetBarcodeStepState();
+    };
+
+    // Return to the barcode-scanner step from manual entry to auto-scan instead.
+    const handleAutoScanInstead = () => {
+        setStep('barcode');
+        setBarcodeScanStatus('idle');
+        setBarcodeScanError(null);
+        resetBarcodeStepState();
     };
     
     const calculateShelfLife = (prodStr: string | null, expStr: string | null): { shelfLife: number | null, shelfLifeUnit: 'days' | 'months' | null } => {
@@ -377,11 +399,20 @@ export const ProductFormModal: React.FC<{
                 </div>
             )}
 
-            <div className="mt-8 flex justify-end gap-3 border-t border-slate-100 pt-6">
-                <button type="button" onClick={onClose} className="bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm px-4 py-2.5 rounded-lg border border-slate-200 transition-colors">Cancel</button>
-                <button type="submit" disabled={barcodeScanStatus === 'loading' || !barcodeImageFile} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-lg shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                    {barcodeScanStatus === 'loading' && <Spinner/>} Next: Add Details
+            <div className="mt-8 flex flex-col-reverse sm:flex-row sm:justify-between sm:items-center gap-3 border-t border-slate-100 pt-6">
+                <button
+                    type="button"
+                    onClick={handleSkipToManualEntry}
+                    className="text-sm font-semibold text-slate-500 hover:text-blue-600 transition-colors text-center sm:text-left"
+                >
+                    Skip — enter details manually
                 </button>
+                <div className="flex justify-end gap-3">
+                    <button type="button" onClick={onClose} className="bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm px-4 py-2.5 rounded-lg border border-slate-200 transition-colors">Cancel</button>
+                    <button type="submit" disabled={barcodeScanStatus === 'loading' || !barcodeImageFile} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-lg shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        {barcodeScanStatus === 'loading' && <Spinner/>} Next: Add Details
+                    </button>
+                </div>
             </div>
         </form>
     );
@@ -417,6 +448,17 @@ export const ProductFormModal: React.FC<{
                 <div>
                     <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Barcode</label>
                     <input name="barcode" value={formData.barcode} onChange={handleChange} placeholder="Scan or enter barcode" className={`w-full px-3 py-2.5 text-sm font-mono text-slate-900 placeholder-slate-400 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${initialBarcode ? 'bg-slate-50' : 'bg-white'}`} required readOnly={!!initialBarcode} />
+                    {/* Offer to auto-scan instead — only in the add-from-scratch flow. */}
+                    {!product && !initialBarcode && (
+                        <button
+                            type="button"
+                            onClick={handleAutoScanInstead}
+                            className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+                        >
+                            <CameraIcon className="w-3.5 h-3.5" />
+                            Auto-scan barcode
+                        </button>
+                    )}
                 </div>
 
                 {product?.batchInfoText && (
@@ -597,7 +639,7 @@ export const ProductFormModal: React.FC<{
             </div>
             <div className="mt-8 flex justify-end gap-3 border-t border-slate-100 bg-slate-50 -mx-6 -mb-6 px-6 py-4 rounded-b-xl sm:-mx-8 sm:-mb-8 sm:px-8 sm:py-5">
                 <button type="button" onClick={onClose} className="bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm px-4 py-2.5 rounded-lg border border-slate-200 transition-colors">Cancel</button>
-                <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-lg shadow-sm transition-colors">Save Product</button>
+                <button type="submit" className="press bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-lg shadow-sm">Save Product</button>
             </div>
         </form>
     );
@@ -672,6 +714,7 @@ const DeleteConfirmationModal: React.FC<{
 
 const DatabasePage: React.FC = () => {
     const { user } = useAuth();
+    const { showToast } = useToast();
     const [products, setProducts] = useState<ProductData[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -702,12 +745,10 @@ const DatabasePage: React.FC = () => {
     };
 
     const handleSaveProduct = async (product: ProductData) => {
-        if (editingProduct) {
-            await databaseService.updateProduct(product);
-        } else {
-            await databaseService.addProduct(product);
-        }
+        const wasEditing = Boolean(editingProduct);
+        await (wasEditing ? databaseService.updateProduct(product) : databaseService.addProduct(product));
         fetchProducts(); // Refresh list
+        showToast(wasEditing ? 'Product updated' : 'Product added', 'success');
     };
     
     const handleRequestDelete = (product: ProductData) => {
@@ -717,8 +758,10 @@ const DatabasePage: React.FC = () => {
     
     const handleConfirmDelete = async () => {
         if (productToDelete) {
+            const name = productToDelete.productName;
             await databaseService.deleteProduct(productToDelete.id);
             fetchProducts();
+            showToast(`${name} deleted`, 'success');
         }
         setIsDeleteModalOpen(false);
         setProductToDelete(null);
@@ -756,7 +799,7 @@ const DatabasePage: React.FC = () => {
             />
 
             {/* Header */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-6 py-5">
+            <div className="bg-white rounded-xl border border-slate-200/70 shadow-card px-6 py-5">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Product Database</h1>
@@ -772,7 +815,7 @@ const DatabasePage: React.FC = () => {
                             </button>
                             <button
                                 onClick={() => handleOpenModal()}
-                                className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-sm"
+                                className="press flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-sm"
                             >
                                 <PlusIcon className="w-4 h-4" /> Add Product
                             </button>
@@ -793,12 +836,12 @@ const DatabasePage: React.FC = () => {
 
             {/* Table */}
             {isLoading ? (
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-6 py-16 flex flex-col items-center justify-center">
+                <div className="bg-white rounded-xl border border-slate-200/70 shadow-card px-6 py-16 flex flex-col items-center justify-center">
                     <div className="text-blue-600"><Spinner /></div>
                     <p className="mt-3 text-sm font-semibold text-slate-700">Loading products…</p>
                 </div>
             ) : (
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="bg-white rounded-xl border border-slate-200/70 shadow-card overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm text-left">
                             <thead className="border-b border-slate-200 bg-slate-50">

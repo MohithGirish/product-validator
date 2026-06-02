@@ -1,4 +1,5 @@
 const API_BASE = '/api';
+const OCR_TIMEOUT_MS = 60_000;
 
 async function postImage(endpoint: string, imageFile: File, extra?: Record<string, string>): Promise<Response> {
   const form = new FormData();
@@ -9,13 +10,21 @@ async function postImage(endpoint: string, imageFile: File, extra?: Record<strin
     }
   }
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), OCR_TIMEOUT_MS);
+
   let res: Response;
   try {
-    res = await fetch(`${API_BASE}${endpoint}`, { method: 'POST', body: form });
-  } catch {
+    res = await fetch(`${API_BASE}${endpoint}`, { method: 'POST', body: form, signal: controller.signal });
+  } catch (err: any) {
+    if (err?.name === 'AbortError') {
+      throw new Error('OCR request timed out. Please try again.');
+    }
     throw new Error(
       'Cannot reach the backend server. Make sure you started the app with "npm run dev".'
     );
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   if (!res.ok) {
@@ -37,7 +46,7 @@ export const extractProductInfoFromImage = async (
 export const extractBatchCodeFromImage = async (
   imageFile: File,
   batchFormat: string
-): Promise<{ batchCode: string; productionDate: string; expiryDate: string; price: string; engine?: OcrEngine }> => {
+): Promise<{ batchCode: string; productionDate: string; expiryDate: string; price: string; batchInfoText: string; engine?: OcrEngine }> => {
   const res = await postImage('/extract-batch', imageFile, { batchFormat });
   return res.json();
 };

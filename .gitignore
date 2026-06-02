@@ -17,6 +17,9 @@ backend/data/*.db-*
 # Claude Code
 .claude/
 
+# Graphify output
+graphify-out/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

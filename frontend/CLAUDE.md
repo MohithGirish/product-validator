@@ -35,7 +35,7 @@ This is a React 19 + TypeScript SPA built with Vite. Image extraction and produc
 
 The validation workflow is a two-step local OCR pipeline:
 1. **Step 1 – Barcode scan**: User uploads/captures a product image → `imageExtractionService.extractProductInfoFromImage()` returns `{barcode, productName}` → `databaseService.findProductsByBarcode()` looks up the product.
-2. **Step 2 – Batch code scan**: User uploads/captures the batch info image → `imageExtractionService.extractBatchCodeFromImage()` returns `{batchCode, productionDate, expiryDate, price}` → `ValidatorPage` runs two local validations: `validateBatchCodeAgainstFormat()` (regex from format string) and `validateShelfLife()` (date arithmetic).
+2. **Step 2 – Batch code scan**: User uploads/captures the batch info image → `imageExtractionService.extractBatchCodeFromImage()` returns `{batchCode, productionDate, expiryDate, price, batchInfoText}` → `ValidatorPage` calls `validateFullCode()` in [utils/validateProduct.ts](utils/validateProduct.ts), which verifies the **entire** printed code block against the master record: batch-code format, MRP/price, shelf-life (expiry − production vs. stored `shelfLife`), date presence/order, and a per-line generalized (#/@) comparison of the info block. Each sub-check returns a pass/fail with expected-vs-found values, surfaced in `ResultModal`.
 
 ### Batch Number Format Convention
 

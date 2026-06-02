@@ -12,51 +12,7 @@ import CameraModal from './CameraModal';
 import { CameraIcon } from './icons/CameraIcon';
 import { CheckCircleIcon } from './icons/CheckCircleIcon';
 import { ProductFormModal } from './DatabasePage';
-
-const validateBatchCodeAgainstFormat = (batchCode: string, format: string): boolean => {
-    if (!batchCode || !format) return false;
-
-    let regexString = '^';
-    for (const char of format) {
-        switch (char) {
-            case '#':
-                regexString += '\\d';
-                break;
-            case '@':
-                regexString += '[A-Z]';
-                break;
-            default:
-                regexString += char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        }
-    }
-    regexString += '$';
-
-    try {
-        const finalRegex = new RegExp(regexString, 'i');
-        return finalRegex.test(batchCode.trim());
-    } catch (e) {
-        console.error("Invalid regex generated from format:", regexString, e);
-        return false;
-    }
-};
-
-const parseUtcDate = (dateStr: string): Date | null => {
-    if (!dateStr) return null;
-    const parsed = new Date(dateStr);
-    if (isNaN(parsed.getTime())) return null;
-    return new Date(Date.UTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate()));
-};
-
-const differenceInDaysUtc = (startDate: Date, endDate: Date): number => {
-    const dayMs = 1000 * 60 * 60 * 24;
-    return Math.round((endDate.getTime() - startDate.getTime()) / dayMs);
-};
-
-const addMonthsUtc = (date: Date, months: number): Date => {
-    const result = new Date(date.getTime());
-    result.setUTCMonth(result.getUTCMonth() + months);
-    return result;
-};
+import { validateFullCode } from '../utils/validateProduct';
 
 /* ── Step Progress Indicator ─────────────────────────────── */
 const StepIndicator: React.FC<{ step: 'barcode' | 'market_select' | 'batch' }> = ({ step }) => {
@@ -234,8 +190,8 @@ const ValidatorPage: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const resetImageInput = useCallback(() => {
+    setImageUrl(prev => { if (prev) URL.revokeObjectURL(prev); return null; });
     setImageFile(null);
-    setImageUrl(null);
     setImageDataUrl(null);
     setError(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -250,7 +206,7 @@ const ValidatorPage: React.FC = () => {
     setResultForModal(null);
     setOcrEngine('gemini');
     setStep('barcode');
-    setBarcodeImageUrl(null);
+    setBarcodeImageUrl(prev => { if (prev) URL.revokeObjectURL(prev); return null; });
     setBarcodeImageDataUrl(null);
     setShowBarcodeSuccessPopup(false);
     resetImageInput();
@@ -345,22 +301,22 @@ const ValidatorPage: React.FC = () => {
     setStatus(ValidationStatus.LOADING);
     setError(null);
     try {
-        const { batchCode: rawBatchCode, productionDate, expiryDate, price, engine } = await extractBatchCodeFromImage(imageFile, foundProduct.batchNumberFormat);
+        const { batchCode: rawBatchCode, productionDate, expiryDate, price, batchInfoText, engine } = await extractBatchCodeFromImage(imageFile, foundProduct.batchNumberFormat);
         if (engine) setOcrEngine(engine);
 
-        let isValid = true;
-        let failureReason = '';
+        // Verify the ENTIRE printed code block against the master record, not just
+        // the batch-code line: format, MRP, shelf-life, date validity, and per-line info block.
+        const { isValid, failureReason, checks } = validateFullCode({
+            product: foundProduct,
+            batchCode: rawBatchCode,
+            barcode: extractedBarcode,
+            productionDate,
+            expiryDate,
+            price,
+            scannedInfoText: batchInfoText || '',
+        });
 
-        if (!rawBatchCode) {
-            isValid = false;
-            failureReason = 'Could not find a batch code in the image.';
-        } else {
-            const isBatchCodeValid = validateBatchCodeAgainstFormat(rawBatchCode, foundProduct.batchNumberFormat);
-            if (!isBatchCodeValid) {
-                isValid = false;
-                failureReason = `Extracted code "${rawBatchCode}" does not match format "${foundProduct.batchNumberFormat}".`;
-            }
-        }
+        const byKey = (k: string) => checks.find(c => c.key === k)?.passed ?? false;
 
         const validationResult: Omit<ValidationRecord, 'id' | 'timestamp' | 'userId'> = {
             extractedBatch: rawBatchCode,
@@ -376,26 +332,25 @@ const ValidatorPage: React.FC = () => {
             extractedExpiryDate: expiryDate,
             extractedPrice: price,
             marketType: foundProduct?.marketType,
-                        detailMatches: {
-                            productName: Boolean(foundProduct?.productName),
-                            expectedBatchFormat: Boolean(foundProduct?.batchNumberFormat),
-                            extractedBatch: Boolean(rawBatchCode && validateBatchCodeAgainstFormat(rawBatchCode, foundProduct.batchNumberFormat)),
-                            extractedBarcode: Boolean(extractedBarcode),
-                            extractedProductionDate: Boolean(productionDate),
-                            extractedExpiryDate: Boolean(expiryDate),
-                            extractedPrice: Boolean(price),
-                        },
+            checks,
+            detailMatches: {
+                productName: Boolean(foundProduct?.productName),
+                expectedBatchFormat: Boolean(foundProduct?.batchNumberFormat),
+                extractedBatch: byKey('batchCode'),
+                extractedBarcode: byKey('barcode'),
+                extractedProductionDate: byKey('dates'),
+                extractedExpiryDate: byKey('dates'),
+                extractedPrice: checks.some(c => c.key === 'mrp') ? byKey('mrp') : Boolean(price),
+            },
         };
 
         setResultForModal(validationResult);
         addHistoryRecord(validationResult);
-        setStatus(ValidationStatus.SUCCESS);
         setIsResultModalOpen(true);
+        setStatus(ValidationStatus.IDLE);
     } catch (err: any) {
         setError(err.message || 'Failed to validate batch code. Please try again.');
         setStatus(ValidationStatus.ERROR);
-    } finally {
-        setStatus(ValidationStatus.IDLE);
     }
   };
 
@@ -431,20 +386,15 @@ const ValidatorPage: React.FC = () => {
       )}
 
       <div className="max-w-2xl mx-auto">
-        {/* Mode badge row */}
+        {/* Mode badge row — quiet status indicator, not a decorative animation */}
         <div className="flex justify-end mb-3">
-          <span className={`inline-flex items-center gap-2 pl-2 pr-3 py-1 rounded-full text-xs font-semibold transition-colors shadow-sm ${
+          <span className={`inline-flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-md text-[11px] font-semibold tracking-wide transition-colors ${
             ocrEngine === 'gemini'
-              ? 'bg-blue-50 text-blue-700 border border-blue-200'
+              ? 'bg-brand-50 text-brand-700 border border-brand-100'
               : 'bg-amber-50 text-amber-700 border border-amber-200'
           }`}>
-            <span className="relative flex h-2 w-2">
-              {ocrEngine === 'gemini' && (
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
-              )}
-              <span className={`relative inline-flex rounded-full h-2 w-2 ${ocrEngine === 'gemini' ? 'bg-blue-500' : 'bg-amber-500'}`} />
-            </span>
-            {ocrEngine === 'gemini' ? 'Gemini Mode' : 'Local Mode'}
+            <span className={`inline-block rounded-full h-1.5 w-1.5 ${ocrEngine === 'gemini' ? 'bg-brand-600' : 'bg-amber-500'}`} />
+            {ocrEngine === 'gemini' ? 'Cloud OCR' : 'Local OCR'}
           </span>
         </div>
         {/* Step Indicator — shown on barcode and batch steps */}
@@ -452,7 +402,7 @@ const ValidatorPage: React.FC = () => {
 
         {/* ── Step 1: Barcode ─────────────────────────────── */}
         {step === 'barcode' && (
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden animate-slide-up">
+            <div className="bg-white rounded-xl border border-slate-200/70 shadow-card overflow-hidden animate-slide-up">
               <div className="px-6 py-5 border-b border-slate-100 border-l-4 border-l-blue-600">
                   <h2 className="text-lg font-semibold text-slate-900 tracking-tight">Scan Barcode</h2>
                   <p className="text-sm text-slate-500 mt-0.5">Upload or capture the product barcode to identify it.</p>
@@ -479,7 +429,7 @@ const ValidatorPage: React.FC = () => {
                     <button
                         type="submit"
                         disabled={status === ValidationStatus.LOADING || !imageFile}
-                        className="w-full flex justify-center items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-lg shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="press w-full flex justify-center items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-lg shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {status === ValidationStatus.LOADING ? <><Spinner /> Identifying…</> : 'Find Product by Barcode'}
                     </button>
@@ -490,7 +440,7 @@ const ValidatorPage: React.FC = () => {
 
         {/* ── Step 1b: Market Select ───────────────────────── */}
         {step === 'market_select' && (
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden animate-slide-up">
+            <div className="bg-white rounded-xl border border-slate-200/70 shadow-card overflow-hidden animate-slide-up">
                 <div className="px-6 py-5 border-b border-slate-100 border-l-4 border-l-blue-600">
                     <h2 className="text-lg font-semibold text-slate-900 tracking-tight">Multiple Markets Found</h2>
                     <p className="text-sm text-slate-500 mt-0.5">The barcode matches products for more than one market. Select the correct one.</p>
@@ -514,7 +464,7 @@ const ValidatorPage: React.FC = () => {
 
         {/* ── Step 2: Batch ────────────────────────────────── */}
         {step === 'batch' && foundProduct && (
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden animate-slide-up">
+            <div className="bg-white rounded-xl border border-slate-200/70 shadow-card overflow-hidden animate-slide-up">
                 <div className="px-6 py-5 border-b border-slate-100 border-l-4 border-l-blue-600">
                     <h2 className="text-lg font-semibold text-slate-900 tracking-tight">Validate Batch Code</h2>
                     <p className="text-sm text-slate-500 mt-0.5">
@@ -525,15 +475,15 @@ const ValidatorPage: React.FC = () => {
                 <div className="p-6 space-y-5">
                     {/* Reference block */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        {barcodeImageUrl && (
+                        {barcodeImageDataUrl && (
                             <div className="sm:col-span-1">
                                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Step 1 Image</p>
                                 <div className="bg-slate-50 border border-slate-200 rounded-lg p-2 flex items-center justify-center min-h-[80px]">
-                                    <img src={barcodeImageUrl} alt="Barcode Scan" className="max-h-24 object-contain rounded" />
+                                    <img src={barcodeImageDataUrl} alt="Scanned product barcode" className="max-h-24 object-contain rounded" />
                                 </div>
                             </div>
                         )}
-                        <div className={barcodeImageUrl ? 'sm:col-span-2' : 'sm:col-span-3'}>
+                        <div className={barcodeImageDataUrl ? 'sm:col-span-2' : 'sm:col-span-3'}>
                             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Expected Batch Format</p>
                             <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 min-h-[80px] flex flex-col justify-center">
                                 <pre className="whitespace-pre-wrap text-slate-800 text-sm font-mono leading-relaxed">
@@ -580,7 +530,7 @@ const ValidatorPage: React.FC = () => {
                             <button
                                 type="submit"
                                 disabled={status === ValidationStatus.LOADING || !imageFile}
-                                className="w-2/3 flex justify-center items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-lg shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="press w-2/3 flex justify-center items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-lg shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {status === ValidationStatus.LOADING ? <><Spinner /> Validating…</> : 'Validate Batch Code'}
                             </button>

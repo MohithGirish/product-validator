@@ -920,6 +920,7 @@ async function extractBatchCodeFromImageBuffer(buffer, mimeType, batchFormat) {
     productionDate: productionDate || '',
     expiryDate: expiryDate || '',
     price: price || '',
+    batchInfoText: extractRelevantBatchText(ocrContext) || '',
   };
 }
 

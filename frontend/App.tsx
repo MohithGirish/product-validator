@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider } from './components/common/Toast';
 import LoginPage from './components/LoginPage';
 import ValidatorPage from './components/ValidatorPage';
 import HistoryPage from './components/HistoryPage';
@@ -17,9 +18,10 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] overflow-x-hidden">
+    <div className="min-h-dvh bg-[#F4F6FA] overflow-x-hidden">
       <Header currentPage={currentPage} setCurrentPage={setCurrentPage} />
-      <main className="p-4 sm:p-6 lg:p-8 pb-6">
+      {/* key on currentPage so each tab switch replays a subtle entrance — spatial continuity */}
+      <main key={currentPage} className="p-4 sm:p-6 lg:p-8 pb-6 animate-page-in">
         {currentPage === Page.VALIDATOR && <ValidatorPage />}
         {currentPage === Page.DATABASE && <DatabasePage />}
         {currentPage === Page.HISTORY && <HistoryPage />}
@@ -31,9 +33,11 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ToastProvider>
   );
 };
 

@@ -5,6 +5,7 @@ import { ValidationRecord } from '../types';
 import { KeyboardIcon } from './icons/KeyboardIcon';
 import { databaseService } from '../services/databaseService';
 import { XIcon } from './icons/XIcon';
+import { useToast } from './common/Toast';
 
 const ConfirmClearModal: React.FC<{ onConfirm: () => void; onCancel: () => void }> = ({ onConfirm, onCancel }) => (
   <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 p-4 animate-fade-in" onClick={onCancel}>
@@ -76,7 +77,7 @@ const HistoryCard: React.FC<{ record: ValidationRecord; username?: string }> = (
     <>
       <ImageModal isOpen={!!imageModalUrl} onClose={() => setImageModalUrl(null)} imageUrl={imageModalUrl} />
 
-      <div className={`bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col sm:flex-row hover:shadow-md transition-shadow duration-200 border-l-4 ${
+      <div className={`bg-white rounded-xl border border-slate-200/70 shadow-card overflow-hidden flex flex-col sm:flex-row hover:shadow-card-hover transition-shadow duration-200 border-l-4 ${
         record.isValid ? 'border-l-emerald-500' : 'border-l-red-400'
       }`}>
         {/* Thumbnail column */}
@@ -152,6 +153,7 @@ const HistoryCard: React.FC<{ record: ValidationRecord; username?: string }> = (
 
 const HistoryPage: React.FC = () => {
   const { history, user, clearHistory } = useAuth();
+  const { showToast } = useToast();
   const [users, setUsers] = useState<Map<string, string>>(new Map());
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
@@ -165,6 +167,7 @@ const HistoryPage: React.FC = () => {
   const handleClearHistory = async () => {
     await clearHistory();
     setShowClearConfirm(false);
+    showToast('Validation history cleared', 'success');
   };
 
   return (

@@ -7,19 +7,46 @@
     <title>Factory Product Code Validator</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
+      // ── ITC Limited brand system ───────────────────────────────────────────
+      // The ITC corporate mark is a deep navy triangle. The whole product is
+      // anchored to that navy (not the generic SaaS blue). The Tailwind `blue`
+      // ramp is intentionally REMAPPED to this navy scale so every existing
+      // `blue-600/700/...` class renders on-brand without per-file churn.
+      const itcNavy = {
+        50:  '#EEF2F8',
+        100: '#D7E0EE',
+        200: '#B0C2DC',
+        300: '#7F9BC4',
+        400: '#4C6CA3',
+        500: '#2C4B82',
+        600: '#1B3361',  // primary — close to the logo navy
+        700: '#15294E',  // primary hover / pressed
+        800: '#112141',
+        900: '#0C1830',
+        950: '#070F1F',
+      };
       tailwind.config = {
         theme: {
           extend: {
-            fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
+            fontFamily: {
+              sans: ['"Plus Jakarta Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+              mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+            },
             colors: {
-              primary: { DEFAULT: '#2563EB', hover: '#1D4ED8', light: '#EFF6FF', ring: '#BFDBFE' },
+              // Semantic brand tokens (preferred for new code).
+              brand: { ...itcNavy, DEFAULT: itcNavy[600] },
+              // Remap blue → ITC navy so legacy `blue-*` classes are on-brand.
+              blue: itcNavy,
+              // A single, restrained accent for highlights/links (corporate cyan-navy).
+              accent: { DEFAULT: '#0369A1', hover: '#075985', light: '#E8F1F8' },
             },
             boxShadow: {
-              card: '0 1px 3px 0 rgba(0,0,0,0.08), 0 1px 2px -1px rgba(0,0,0,0.06)',
-              'card-lg': '0 4px 12px 0 rgba(0,0,0,0.08), 0 2px 4px -1px rgba(0,0,0,0.05)',
+              card: '0 1px 2px 0 rgba(12,24,48,0.06), 0 1px 3px 0 rgba(12,24,48,0.05)',
+              'card-lg': '0 4px 16px -2px rgba(12,24,48,0.10), 0 2px 6px -2px rgba(12,24,48,0.06)',
+              'card-hover': '0 6px 20px -4px rgba(12,24,48,0.14), 0 3px 8px -3px rgba(12,24,48,0.08)',
             },
           },
         },
@@ -27,30 +54,60 @@
     </script>
     <style>
       html, body {
-        background-color: #F8FAFC;
-        font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+        background-color: #F4F6FA;
+        color: #0C1830;
+        font-family: '"Plus Jakarta Sans"', 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
       }
+      /* Tabular figures for all data: prices, dates, barcodes, counters — prevents layout jitter */
+      .font-mono, code, pre, table, .tabular-nums { font-variant-numeric: tabular-nums; }
+
       @keyframes fadeIn {
-        from { opacity: 0; transform: scale(0.97) translateY(4px); }
+        from { opacity: 0; transform: scale(0.98) translateY(3px); }
         to   { opacity: 1; transform: scale(1)    translateY(0px); }
       }
       @keyframes slideUp {
-        from { opacity: 0; transform: translateY(12px); }
+        from { opacity: 0; transform: translateY(10px); }
         to   { opacity: 1; transform: translateY(0); }
       }
-      .animate-fade-in  { animation: fadeIn  0.2s ease-out forwards; }
-      .animate-slide-up { animation: slideUp 0.25s ease-out forwards; }
+      @keyframes pageIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      .animate-fade-in  { animation: fadeIn  0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+      .animate-slide-up { animation: slideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+      .animate-page-in  { animation: pageIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) both; }
       .hide-scrollbar::-webkit-scrollbar { display: none; }
       .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+      /* Refined scrollbars for data-heavy panels */
+      ::-webkit-scrollbar { width: 10px; height: 10px; }
+      ::-webkit-scrollbar-thumb { background: #C7D1E0; border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
+      ::-webkit-scrollbar-thumb:hover { background: #A7B5CC; background-clip: content-box; }
+      ::-webkit-scrollbar-track { background: transparent; }
+
       /* Hide arrows from number input */
       input[type=number]::-webkit-inner-spin-button,
       input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
       input[type=number] { -moz-appearance: textfield; }
-      /* Focus ring consistency */
-      :focus-visible { outline: 2px solid #2563EB; outline-offset: 2px; }
-      button, [role="button"] { cursor: pointer; }
+
+      /* Brand-consistent focus ring (ITC navy) */
+      :focus-visible { outline: 2px solid #1B3361; outline-offset: 2px; }
+      button, [role="button"] { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+
+      /* Snappier taps on touch devices (removes the 300ms delay) and a subtle,
+         consistent press feedback on primary buttons for a tactile, premium feel. */
+      button, a, [role="button"], input, select, textarea { touch-action: manipulation; }
+      .press { transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.15s ease; }
+      .press:active { transform: scale(0.98); }
+
+      @media (prefers-reduced-motion: reduce) {
+        .animate-fade-in, .animate-slide-up, .animate-page-in { animation: none; }
+        .press:active { transform: none; }
+        * { scroll-behavior: auto !important; }
+      }
     </style>
 </head>
   <body>

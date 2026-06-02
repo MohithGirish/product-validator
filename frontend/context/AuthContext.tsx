@@ -61,15 +61,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     await databaseService.addHistoryRecord(newRecord);
-    
-    // Optimistically update the local history state
-    if (user.role === 'staff') {
-        // For staff, only add if it's their own record (which it always will be)
-        setHistory(prevHistory => [newRecord, ...prevHistory]);
-    } else {
-        // For admins, add to their global view
-        setHistory(prevHistory => [newRecord, ...prevHistory]);
-    }
+    setHistory(prevHistory => [newRecord, ...prevHistory]);
 
   }, [user]);
 

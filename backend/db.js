@@ -88,9 +88,192 @@ async function initializeDatabase() {
 
   const countResult = await get('SELECT COUNT(*) AS count FROM products');
   if (countResult && countResult.count === 0) {
-    for (const product of seedProducts) {
-      await createProduct(product);
+    await run('BEGIN');
+    try {
+      for (const product of seedProducts) {
+        await createProduct(product);
+      }
+      await run('COMMIT');
+    } catch (err) {
+      await run('ROLLBACK');
+      throw err;
     }
+  }
+
+  // ── Users table ────────────────────────────────────────────────────────────
+  await run(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      username TEXT NOT NULL UNIQUE,
+      password TEXT NOT NULL,
+      role TEXT NOT NULL CHECK (role IN ('admin', 'staff')),
+      is_protected INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
+  // Migration: add is_protected to user tables created before this column existed.
+  const userCols = await all('PRAGMA table_info(users)');
+  if (!userCols.some(c => c.name === 'is_protected')) {
+    await run('ALTER TABLE users ADD COLUMN is_protected INTEGER NOT NULL DEFAULT 0');
+  }
+
+  // Database-level guard: block deletion of any protected user at the engine
+  // itself, so even a direct `DELETE FROM users` cannot remove the original admin.
+  await run(`
+    CREATE TRIGGER IF NOT EXISTS trg_protect_user_delete
+    BEFORE DELETE ON users
+    WHEN OLD.is_protected = 1
+    BEGIN
+      SELECT RAISE(ABORT, 'protected user cannot be deleted');
+    END
+  `);
+
+  const userCount = await get('SELECT COUNT(*) AS count FROM users');
+  if (userCount && userCount.count === 0) {
+    await run('BEGIN');
+    try {
+      for (const user of SEED_USERS) {
+        await run(
+          'INSERT INTO users (id, username, password, role, is_protected) VALUES (?, ?, ?, ?, ?)',
+          [user.id, user.username, user.password, user.role, user.isProtected ? 1 : 0]
+        );
+      }
+      await run('COMMIT');
+    } catch (err) {
+      await run('ROLLBACK');
+      throw err;
+    }
+  }
+
+  await ensureProtectedAdmin();
+}
+
+// Self-heal the permanent administrator. Protection is now a durable property
+// (the is_protected flag), re-asserted on every startup — not a hardcoded id.
+// This closes the "recreated with a new id" gap: even if the protected row were
+// somehow removed, it is restored here, and exactly one protected admin is kept.
+async function ensureProtectedAdmin() {
+  const protectedAdmin = await get("SELECT id FROM users WHERE is_protected = 1 AND role = 'admin' LIMIT 1");
+  if (protectedAdmin) return;
+
+  // No protected admin present — adopt the seed admin if it exists, else recreate it.
+  const seed = SEED_USERS.find(u => u.isProtected) || SEED_USERS[0];
+  const existing = await get('SELECT id FROM users WHERE id = ? OR username = ?', [seed.id, seed.username]);
+  if (existing) {
+    await run('UPDATE users SET is_protected = 1, role = ? WHERE id = ?', ['admin', existing.id]);
+  } else {
+    await run(
+      'INSERT INTO users (id, username, password, role, is_protected) VALUES (?, ?, ?, ?, 1)',
+      [seed.id, seed.username, seed.password, 'admin']
+    );
+  }
+}
+
+// Initial accounts seeded on first run. Passwords follow the <Name>@123 scheme.
+// The first admin is flagged isProtected — it is permanent and cannot be deleted.
+const SEED_USERS = [
+  { id: 'user-000', username: 'Admin', password: 'Admin@123', role: 'admin', isProtected: true },
+  { id: 'user-001', username: 'User1', password: 'User1@123', role: 'staff' },
+  { id: 'user-002', username: 'User2', password: 'User2@123', role: 'staff' },
+  { id: 'user-003', username: 'User3', password: 'User3@123', role: 'staff' },
+  { id: 'user-004', username: 'User4', password: 'User4@123', role: 'staff' },
+];
+
+function mapRowToUser(row, includePassword = false) {
+  if (!row) return null;
+  const user = { id: row.id, username: row.username, role: row.role, isProtected: Boolean(row.is_protected) };
+  if (includePassword) user.password = row.password;
+  return user;
+}
+
+async function getUsers() {
+  const rows = await all('SELECT id, username, role, is_protected, created_at FROM users');
+  const users = rows.map(r => mapRowToUser(r));
+  // Stable, predictable order independent of when each account was created:
+  //   1. protected (original) admin first
+  //   2. other admins
+  //   3. staff
+  // and within each group, natural sort by username (User2 before User10).
+  const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+  const rank = (u) => (u.isProtected ? 0 : u.role === 'admin' ? 1 : 2);
+  return users.sort((a, b) => rank(a) - rank(b) || collator.compare(a.username, b.username));
+}
+
+async function findUserByCredentials(username, password) {
+  const row = await get('SELECT * FROM users WHERE username = ? AND password = ?', [username, password]);
+  return mapRowToUser(row);
+}
+
+// Password rule: at least 6 characters, at least one letter (upper or lower),
+// and at least one special character. Shared with the frontend message.
+const PASSWORD_RULE_MESSAGE =
+  'Password must be at least 6 characters and include a letter and a special character (e.g. @ & * !).';
+
+function isPasswordValid(password) {
+  return (
+    password.length >= 6 &&
+    /[A-Za-z]/.test(password) &&
+    /[^A-Za-z0-9]/.test(password)
+  );
+}
+
+async function createUser(rawUser) {
+  const username = String(rawUser.username || '').trim();
+  const password = String(rawUser.password || '');
+  const role = rawUser.role === 'admin' ? 'admin' : 'staff';
+
+  if (!username) throw new Error('Username is required.');
+  if (!isPasswordValid(password)) throw new Error(PASSWORD_RULE_MESSAGE);
+
+  const existing = await get('SELECT id FROM users WHERE username = ?', [username]);
+  if (existing) throw new Error('A user with that username already exists.');
+
+  const id = `user-${Date.now()}`;
+  await run('INSERT INTO users (id, username, password, role) VALUES (?, ?, ?, ?)', [id, username, password, role]);
+  const row = await get('SELECT id, username, role, created_at FROM users WHERE id = ?', [id]);
+  return mapRowToUser(row);
+}
+
+// The very first seeded admin's id (kept for reference/back-compat). Protection
+// is enforced by the is_protected flag + DB trigger, not by this constant.
+const PROTECTED_ADMIN_ID = 'user-000';
+
+async function deleteUser(id) {
+  const target = await get('SELECT id, role, is_protected FROM users WHERE id = ?', [id]);
+  if (!target) return { ok: false, reason: 'not_found' };
+
+  // 1. Protected accounts (the original admin) can never be deleted.
+  if (target.is_protected) {
+    return { ok: false, reason: 'protected_admin' };
+  }
+
+  // 2. Never remove the last administrator.
+  if (target.role === 'admin') {
+    const adminCount = await get("SELECT COUNT(*) AS count FROM users WHERE role = 'admin'");
+    if (adminCount && adminCount.count <= 1) {
+      return { ok: false, reason: 'last_admin' };
+    }
+  }
+
+  // 3. Never remove the last staff/user — at least one must always remain.
+  if (target.role === 'staff') {
+    const staffCount = await get("SELECT COUNT(*) AS count FROM users WHERE role = 'staff'");
+    if (staffCount && staffCount.count <= 1) {
+      return { ok: false, reason: 'last_staff' };
+    }
+  }
+
+  try {
+    const result = await run('DELETE FROM users WHERE id = ?', [id]);
+    return { ok: result.changes > 0 };
+  } catch (err) {
+    // Safety net: the BEFORE DELETE trigger aborts protected-row deletes even if
+    // the checks above were somehow bypassed.
+    if (/protected user cannot be deleted/.test(err.message)) {
+      return { ok: false, reason: 'protected_admin' };
+    }
+    throw err;
   }
 }
 
@@ -211,10 +394,15 @@ async function deleteProduct(id) {
 
 module.exports = {
   DB_PATH,
+  PROTECTED_ADMIN_ID,
   initializeDatabase,
   getProducts,
   getProductsByBarcode,
   createProduct,
   updateProduct,
-  deleteProduct
+  deleteProduct,
+  getUsers,
+  findUserByCredentials,
+  createUser,
+  deleteUser
 };

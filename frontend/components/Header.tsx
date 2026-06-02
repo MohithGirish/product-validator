@@ -28,17 +28,19 @@ const Header: React.FC<HeaderProps> = ({ currentPage, setCurrentPage }) => {
   return (
     <>
       {/* ── Desktop / Tablet Header ───────────────────────── */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 backdrop-blur-sm bg-white/95">
+      <header className="bg-white/90 border-b border-slate-200/80 sticky top-0 z-30 backdrop-blur-md shadow-[0_1px_2px_rgba(12,24,48,0.04)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14">
-            {/* Logo */}
+            {/* Logo — official ITC mark + product wordmark */}
             <div className="flex items-center gap-2.5">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center flex-shrink-0 shadow-sm ring-1 ring-blue-700/20">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
+              <img src="/itc-logo.png" alt="ITC Limited" className="h-8 w-auto object-contain flex-shrink-0" />
+              <div className="hidden sm:flex items-center gap-2.5">
+                <span className="h-5 w-px bg-slate-200" aria-hidden="true" />
+                <span className="text-sm font-bold text-slate-900 tracking-tight leading-none">
+                  Product Validator
+                  <span className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mt-0.5">Factory QC</span>
+                </span>
               </div>
-              <span className="text-base font-bold text-slate-900 tracking-tight hidden sm:block">Validator</span>
             </div>
 
             {/* Desktop Nav */}

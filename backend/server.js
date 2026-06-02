@@ -20,6 +20,10 @@ const {
   createProduct,
   updateProduct,
   deleteProduct,
+  getUsers,
+  findUserByCredentials,
+  createUser,
+  deleteUser,
 } = require('./db');
 const geminiOcr = require('./geminiOcr');
 const localOcr = require('./localOcr');
@@ -35,6 +39,26 @@ app.use(cors({
 app.use(express.json());
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 4 * 1024 * 1024 } });
+
+// Simple in-memory rate limiter for OCR endpoints (max 20 req/min per IP).
+const ocrRateLimitMap = new Map();
+const OCR_WINDOW_MS = 60_000;
+const OCR_MAX_REQUESTS = 20;
+
+function ocrRateLimit(req, res, next) {
+  const ip = req.ip || req.socket.remoteAddress;
+  const now = Date.now();
+  const entry = ocrRateLimitMap.get(ip);
+  if (!entry || now - entry.windowStart > OCR_WINDOW_MS) {
+    ocrRateLimitMap.set(ip, { windowStart: now, count: 1 });
+    return next();
+  }
+  if (entry.count >= OCR_MAX_REQUESTS) {
+    return res.status(429).json({ error: 'Too many OCR requests. Please wait a minute.' });
+  }
+  entry.count++;
+  next();
+}
 
 // ── OCR routing: Gemini first, local fallback ──────────────────────────────
 
@@ -62,6 +86,67 @@ async function withGeminiFallback(geminiCall, localCall, label) {
   console.log(`[OCR] ${label}: local OCR OK`);
   return { result, engine: 'local' };
 }
+
+// ── Auth endpoint ──────────────────────────────────────────────────────────
+
+app.post('/api/auth/login', async (req, res) => {
+  const { username, password } = req.body || {};
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Username and password are required.' });
+  }
+  try {
+    const user = await findUserByCredentials(username, password);
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid username or password.' });
+    }
+    // findUserByCredentials never returns the password field.
+    res.json(user);
+  } catch (err) {
+    console.error('login error:', err.message);
+    res.status(500).json({ error: 'Login failed. Please try again.' });
+  }
+});
+
+// ── User management (admin) ─────────────────────────────────────────────────
+// Note: this app has no session tokens; the frontend only exposes these screens
+// to admins. The endpoints are intentionally simple for the factory-LAN context.
+
+app.get('/api/users', async (_req, res) => {
+  try {
+    res.json(await getUsers());
+  } catch (err) {
+    console.error('get-users error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch users.' });
+  }
+});
+
+app.post('/api/users', async (req, res) => {
+  try {
+    const created = await createUser(req.body || {});
+    res.status(201).json(created);
+  } catch (err) {
+    console.error('create-user error:', err.message);
+    const status = /required|already exists|at least/.test(err.message) ? 400 : 500;
+    res.status(status).json({ error: err.message || 'Failed to create user.' });
+  }
+});
+
+app.delete('/api/users/:id', async (req, res) => {
+  try {
+    const result = await deleteUser(req.params.id);
+    if (!result.ok) {
+      if (result.reason === 'not_found') return res.status(404).json({ error: 'User not found.' });
+      if (result.reason === 'protected_admin') return res.status(400).json({ error: 'The original administrator account cannot be removed.' });
+      if (result.reason === 'last_admin') return res.status(400).json({ error: 'Cannot remove the last administrator.' });
+      if (result.reason === 'last_staff') return res.status(400).json({ error: 'At least one staff user must remain.' });
+      return res.status(400).json({ error: 'Could not remove user.' });
+    }
+    res.status(204).send();
+  } catch (err) {
+    console.error('delete-user error:', err.message);
+    res.status(500).json({ error: 'Failed to delete user.' });
+  }
+});
 
 // ── Product endpoints ──────────────────────────────────────────────────────
 
@@ -123,7 +208,7 @@ app.get('/api/health', (_req, res) =>
 
 // ── OCR endpoints ──────────────────────────────────────────────────────────
 
-app.post('/api/extract-product', upload.single('image'), async (req, res) => {
+app.post('/api/extract-product', ocrRateLimit, upload.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No image file provided.' });
   try {
     const { result, engine } = await withGeminiFallback(
@@ -138,7 +223,7 @@ app.post('/api/extract-product', upload.single('image'), async (req, res) => {
   }
 });
 
-app.post('/api/extract-batch', upload.single('image'), async (req, res) => {
+app.post('/api/extract-batch', ocrRateLimit, upload.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No image file provided.' });
   const batchFormat = req.body.batchFormat || '';
   try {
@@ -152,6 +237,7 @@ app.post('/api/extract-batch', upload.single('image'), async (req, res) => {
       productionDate: result.productionDate || '',
       expiryDate: result.expiryDate || '',
       price: result.price || '',
+      batchInfoText: result.batchInfoText || '',
       engine,
     });
   } catch (err) {
@@ -160,7 +246,7 @@ app.post('/api/extract-batch', upload.single('image'), async (req, res) => {
   }
 });
 
-app.post('/api/extract-batch-format', upload.single('image'), async (req, res) => {
+app.post('/api/extract-batch-format', ocrRateLimit, upload.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No image file provided.' });
   try {
     const { result, engine } = await withGeminiFallback(
@@ -182,7 +268,7 @@ app.post('/api/extract-batch-format', upload.single('image'), async (req, res) =
   }
 });
 
-app.post('/api/analyze-image', upload.single('image'), async (req, res) => {
+app.post('/api/analyze-image', ocrRateLimit, upload.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No image file provided.' });
   const prompt = req.body.prompt || '';
   try {
