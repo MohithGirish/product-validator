@@ -1,12 +1,16 @@
 # Factory Product Code Validator
 
-A factory QC tool for validating product barcodes and batch codes using OCR. Upload or capture a product label image — the app identifies the product by barcode, then validates the batch code format, production/expiry dates, and MRP against the product database.
+A factory QC tool (built for ITC Limited) for validating product barcodes and printed batch code blocks using OCR. Upload or capture a product label image — the app identifies the product by barcode, then verifies the **entire** printed code block (batch number format, MRP, production/expiry dates, and shelf life) against the product database.
+
+> 📖 **End-user instructions:** see [USER_GUIDE.md](USER_GUIDE.md) for a complete, step-by-step guide.
 
 ## Features
 
 - **Two-step OCR validation** — barcode scan → batch code validation
-- **Gemini Mode / Local Mode** — uses Google Gemini OCR by default; automatically falls back to local OCR (PaddleOCR → Tesseract) on network failure
-- **Role-based access** — Admin sees all users' history and can manage products; Staff sees only their own records
+- **Full-code verification** — checks batch-code format, MRP/price, production & expiry dates, shelf life, and a per-line comparison of the printed info block (not just the format line)
+- **Cloud OCR / Local OCR** — uses Google Gemini OCR by default; automatically falls back to local OCR (PaddleOCR → Tesseract) on network failure
+- **Role-based access** — Admin sees all users' history and can manage products and users; Staff sees only their own records
+- **User management** — admins add/remove sign-in accounts; enforced password policy and account-protection invariants (see below)
 - **Validation history** — full audit log with thumbnails of scanned images; admin can clear all history
 - **Product database** — CRUD with batch format editor and auto-inference from label images
 - **CSV export** — admin can export the full validation log
@@ -28,9 +32,9 @@ A factory QC tool for validating product barcodes and batch codes using OCR. Upl
 ```
 factory-product-code-validator/
 ├── backend/
-│   ├── server.js               # Express API server (port 3001)
-│   ├── db.js                   # SQLite schema and CRUD
-│   ├── geminiOcr.js            # Gemini OCR functions
+│   ├── server.js               # Express API server (port 3001): auth, users, products, OCR
+│   ├── db.js                   # SQLite schema + CRUD for products and users
+│   ├── geminiOcr.js            # Cloud (Gemini) OCR functions
 │   ├── localOcr.js             # PaddleOCR / Tesseract fallback
 │   ├── seedProducts.js         # Initial product seed data
 │   └── scripts/
@@ -40,12 +44,15 @@ factory-product-code-validator/
 │   │   ├── ValidatorPage.tsx   # Main two-step validator
 │   │   ├── HistoryPage.tsx     # Validation audit log
 │   │   ├── DatabasePage.tsx    # Product CRUD
-│   │   └── AdminPage.tsx       # Admin dashboard
+│   │   ├── AdminPage.tsx       # Admin dashboard + user management
+│   │   └── common/             # Reusable Modal, ConfirmDialog, Toast, Spinner
 │   ├── context/AuthContext.tsx
 │   ├── services/
 │   │   ├── databaseService.ts
 │   │   └── imageExtractionService.ts
+│   ├── utils/validateProduct.ts # Full-code validation logic
 │   └── types.ts
+├── USER_GUIDE.md               # End-user guide
 ├── .env.example
 └── .env.local                  # Your local config (not committed)
 ```
@@ -114,17 +121,34 @@ npm run dev
 
 # Or start separately:
 npm run dev:backend    # backend on port 3001
-npm run dev:frontend   # frontend on port 3002
+npm run dev:frontend   # frontend on port 3000
 ```
 
-Open [http://localhost:3002](http://localhost:3002).
+Open [http://localhost:3000](http://localhost:3000). The dev server proxies `/api` to the backend on port 3001.
 
 ## Default Credentials
 
-| Username | Password | Role |
-|---|---|---|
-| `admin` | `admin` | Admin — full access, all users' history, product management |
-| `qcmanager` | `qcmanager` | Staff — own history only, read-only product view |
+Seeded into the SQLite `users` table on first run:
+
+| Username | Password | Role | Notes |
+|---|---|---|---|
+| `Admin` | `Admin@123` | Admin — full access, all users' history, product & user management | **Permanent** — cannot be deleted |
+| `User1` | `User1@123` | Staff — own history only | |
+| `User2` | `User2@123` | Staff — own history only | |
+| `User3` | `User3@123` | Staff — own history only | |
+| `User4` | `User4@123` | Staff — own history only | |
+
+> These are starting credentials for setup. Change the staff passwords before real use (remove and re-create via the Admin → User Management screen). Passwords are stored in the local SQLite DB and are never sent back to the client.
+
+## User Management & Account Rules
+
+Admins manage accounts on the **Admin** screen. The following rules are enforced on the backend (the source of truth) and reflected in the UI:
+
+- **Password policy** — at least **6 characters**, with **at least one letter** and **at least one special character** (e.g. `@ & * !`). A live checklist in the Add-User dialog turns green as each rule is met.
+- **The original `Admin` account can never be deleted.** Protection is enforced at the database level (an `is_protected` flag + a SQLite `BEFORE DELETE` trigger), and is self-healed on every startup.
+- **At least one administrator** must always remain.
+- **At least one staff user** must always remain.
+- Admins are always listed first, then staff; within each group users are sorted naturally by username.
 
 ## Batch Number Format Convention
 
@@ -140,18 +164,36 @@ Products store a `batchNumberFormat` string using placeholder characters:
 
 This format string is used to build a validation regex and also guides the local OCR correction engine to fix common character misreads (e.g. `O→0`, `l→1`, `S→5`).
 
+## What Gets Validated
+
+On the second step, the app verifies the **entire** printed code block against the product's master record (see `frontend/utils/validateProduct.ts`):
+
+| Check | Verifies | Affects verdict |
+|---|---|---|
+| **Batch Code Format** | The batch number matches the product's `batchNumberFormat` pattern | Yes |
+| **MRP / Price** | The printed price matches the product's stored MRP (when applicable) | Yes |
+| **Production / Expiry Dates** | Both dates are present and expiry is after production | Yes |
+| **Shelf Life** | `expiry − production` matches the stored shelf life (within tolerance) | Yes |
+| **Info Block Lines** | Per-line, OCR-tolerant comparison of the printed block against the reference | Informational only |
+
+The result modal shows each check with its **expected vs. found** values. "Info Block Lines" is a diagnostic and does not by itself fail an otherwise-valid product.
+
 ## OCR Mode
 
 The mode badge in the top-right corner of the Validator page shows which engine is active:
 
-- **Gemini Mode** (blue) — Gemini API is reachable and being used
-- **Local Mode** (amber) — network unavailable; using PaddleOCR / Tesseract
+- **Cloud OCR** (navy) — the cloud OCR service (Gemini) is reachable and being used
+- **Local OCR** (amber) — network unavailable; using PaddleOCR / Tesseract
 
 ## API Endpoints
 
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/api/health` | Server status and Gemini availability |
+| `POST` | `/api/auth/login` | Authenticate; returns the user (never the password) |
+| `GET` | `/api/users` | List users (admins first, then staff) |
+| `POST` | `/api/users` | Create a user (enforces the password policy) |
+| `DELETE` | `/api/users/:id` | Remove a user (blocked for the protected admin / last admin / last staff) |
 | `GET` | `/api/products` | List all products |
 | `GET` | `/api/products/barcode/:barcode` | Find products by barcode |
 | `POST` | `/api/products` | Create product |
@@ -160,6 +202,9 @@ The mode badge in the top-right corner of the Validator page shows which engine 
 | `POST` | `/api/extract-product` | Extract barcode + product name from image |
 | `POST` | `/api/extract-batch` | Extract and validate batch code from image |
 | `POST` | `/api/extract-batch-format` | Infer batch format from a label image |
+| `POST` | `/api/analyze-image` | Free-form OCR analysis of an image |
+
+> The OCR endpoints are rate-limited to 20 requests/minute per IP.
 
 ## Scripts
 
@@ -167,7 +212,7 @@ The mode badge in the top-right corner of the Validator page shows which engine 
 |---|---|
 | `npm run dev` | Start backend + frontend together |
 | `npm run dev:backend` | Backend only (port 3001) |
-| `npm run dev:frontend` | Frontend only (port 3002) |
+| `npm run dev:frontend` | Frontend only (port 3000) |
 | `npm run build` | Production frontend build |
 | `npm run start` | Production backend start |
 | `cd backend && npm run db:reset` | Reset the SQLite database |
