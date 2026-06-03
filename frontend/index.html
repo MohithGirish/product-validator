@@ -231,6 +231,18 @@
       .logo-chip { padding: 0; border-radius: 8px; background: transparent; transition: background-color 0.2s ease, padding 0.2s ease; }
       html.dark .logo-chip { background: #EEF2F8; padding: 3px 7px; box-shadow: 0 1px 2px rgba(0,0,0,0.35); }
 
+      /* Camera shutter: always light, in BOTH themes — it sits over a dark live
+         camera feed, so it must stay white/legible regardless of app theme. These
+         override the global dark `bg-white` remap (matched on .dark via specificity). */
+      .camera-shutter,
+      html.dark .camera-shutter { background-color: #FFFFFF; border-color: #9CA3AF; }
+      .camera-shutter-inner,
+      html.dark .camera-shutter-inner { background-color: #FFFFFF; }
+      .camera-shutter-inner:active,
+      html.dark .camera-shutter-inner:active { background-color: #E5E7EB; }
+      .camera-shutter svg,
+      html.dark .camera-shutter svg { color: #374151; }
+
       /* Focus ring — brighter on dark for visibility. */
       html.dark :focus-visible { outline-color: var(--ring); }
 

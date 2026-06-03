@@ -106,10 +106,10 @@ const CameraModal: React.FC<CameraModalProps> = ({ isOpen, onClose, onCapture })
             <button
               onClick={handleCapture}
               aria-label="Capture Image"
-              className="w-[72px] h-[72px] rounded-full bg-white flex items-center justify-center border-4 border-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/50 active:scale-95 transition"
+              className="camera-shutter w-[72px] h-[72px] rounded-full flex items-center justify-center border-4 focus:outline-none focus:ring-4 focus:ring-blue-500/50 active:scale-95 transition"
             >
-              <div className="w-14 h-14 rounded-full bg-white active:bg-gray-200 flex items-center justify-center">
-                <CameraIcon className="w-7 h-7 text-gray-700" />
+              <div className="camera-shutter-inner w-14 h-14 rounded-full flex items-center justify-center">
+                <CameraIcon className="w-7 h-7" />
               </div>
             </button>
           </div>
@@ -122,10 +122,10 @@ const CameraModal: React.FC<CameraModalProps> = ({ isOpen, onClose, onCapture })
           <button
             onClick={handleCapture}
             aria-label="Capture Image"
-            className="w-20 h-20 rounded-full bg-white flex items-center justify-center border-4 border-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/50 transition"
+            className="camera-shutter w-20 h-20 rounded-full flex items-center justify-center border-4 focus:outline-none focus:ring-4 focus:ring-blue-500/50 transition"
           >
-            <div className="w-16 h-16 rounded-full bg-white active:bg-gray-200 flex items-center justify-center">
-              <CameraIcon className="w-8 h-8 text-gray-700" />
+            <div className="camera-shutter-inner w-16 h-16 rounded-full flex items-center justify-center">
+              <CameraIcon className="w-8 h-8" />
             </div>
           </button>
         </div>
