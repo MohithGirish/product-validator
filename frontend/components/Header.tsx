@@ -1,11 +1,11 @@
 import React from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Page } from '../types';
-import { LogoutIcon } from './icons/LogoutIcon';
 import { ValidatorIcon } from './icons/ValidatorIcon';
 import { HistoryIcon } from './icons/HistoryIcon';
 import { DatabaseIcon } from './icons/DatabaseIcon';
 import { AdminIcon } from './icons/AdminIcon';
+import ThemeMenu from './ThemeMenu';
 
 interface HeaderProps {
     currentPage: Page;
@@ -13,7 +13,7 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ currentPage, setCurrentPage }) => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
   const navItems = [
@@ -74,8 +74,8 @@ const Header: React.FC<HeaderProps> = ({ currentPage, setCurrentPage }) => {
               })}
             </nav>
 
-            {/* User info + logout */}
-            <div className="flex items-center gap-3">
+            {/* User info + three-dots menu (theme + logout) */}
+            <div className="flex items-center gap-2.5">
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-semibold text-slate-800 leading-tight">{user?.username}</p>
                 <p className="text-xs text-slate-400 capitalize">{user?.role}</p>
@@ -86,13 +86,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, setCurrentPage }) => {
               >
                 {userInitial}
               </div>
-              <button
-                onClick={logout}
-                className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                aria-label="Sign out"
-              >
-                <LogoutIcon />
-              </button>
+              <ThemeMenu />
             </div>
           </div>
         </div>

@@ -29,6 +29,7 @@
         950: '#070F1F',
       };
       tailwind.config = {
+        darkMode: 'class',
         theme: {
           extend: {
             fontFamily: {
@@ -51,6 +52,20 @@
           },
         },
       }
+    </script>
+    <script>
+      // Apply the saved theme before first paint to avoid a light-mode flash.
+      (function () {
+        try {
+          var choice = JSON.parse(localStorage.getItem('theme')) || 'system';
+          var dark = choice === 'dark' ||
+            (choice === 'system' && window.matchMedia &&
+             window.matchMedia('(prefers-color-scheme: dark)').matches);
+          var root = document.documentElement;
+          if (dark) root.classList.add('dark');
+          root.style.colorScheme = dark ? 'dark' : 'light';
+        } catch (e) {}
+      })();
     </script>
     <style>
       html, body {
@@ -115,6 +130,91 @@
       button, a, [role="button"], input, select, textarea { touch-action: manipulation; }
       .press { transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.15s ease; }
       .press:active { transform: scale(0.98); }
+
+      /* ──────────────────────────────────────────────────────────────────────
+         DARK THEME (slate-charcoal — a black/gray blend, never pure black).
+         The app uses hardcoded `white`/`slate-*` utilities everywhere, so rather
+         than touch ~275 call sites we globally retarget those exact utilities to
+         the dark palette under `html.dark`. Brand navy elements (text-white,
+         bg-slate-900/800, opacity variants like bg-white/95) are intentionally
+         NOT remapped here so headers/gradients keep their look.
+         ────────────────────────────────────────────────────────────────────── */
+      html.dark {
+        --bg:        #1A1D23;  /* app background        */
+        --surface:   #23272F;  /* cards / panels        */
+        --surface-2: #2A2F38;  /* slate-50/100 fills    */
+        --surface-3: #313742;  /* slate-200 fills       */
+        --border:    #333A45;  /* default borders       */
+        --border-2:  #3E4654;  /* stronger borders      */
+        --text:      #E8EAED;  /* primary text          */
+        --text-2:    #C2C8D2;  /* secondary text        */
+        --text-3:    #9AA3B2;  /* muted text            */
+        --text-4:    #6B7484;  /* faint text            */
+      }
+
+      html.dark body { background-color: var(--bg); color: var(--text); }
+
+      /* Surfaces */
+      html.dark .bg-white       { background-color: var(--surface) !important; }
+      html.dark .bg-slate-50    { background-color: var(--surface-2) !important; }
+      html.dark .bg-slate-100   { background-color: var(--surface-2) !important; }
+      html.dark .bg-slate-200   { background-color: var(--surface-3) !important; }
+      html.dark .bg-\[\#F4F6FA\]{ background-color: var(--bg) !important; }
+
+      /* Text */
+      html.dark .text-slate-900 { color: var(--text) !important; }
+      html.dark .text-slate-800 { color: var(--text) !important; }
+      html.dark .text-slate-700 { color: var(--text-2) !important; }
+      html.dark .text-slate-600 { color: var(--text-2) !important; }
+      html.dark .text-slate-500 { color: var(--text-3) !important; }
+      html.dark .text-slate-400 { color: var(--text-4) !important; }
+
+      /* Borders / dividers */
+      html.dark .border-slate-50,
+      html.dark .border-slate-100 { border-color: var(--border) !important; }
+      html.dark .border-slate-200 { border-color: var(--border) !important; }
+      html.dark .border-slate-300 { border-color: var(--border-2) !important; }
+      html.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]) { border-color: var(--border) !important; }
+
+      /* Inputs: placeholders + hover fills */
+      html.dark .placeholder-slate-400::placeholder { color: var(--text-4) !important; }
+      html.dark .hover\:bg-slate-50:hover  { background-color: var(--surface-2) !important; }
+      html.dark .hover\:bg-slate-100:hover { background-color: var(--surface-3) !important; }
+      html.dark .hover\:bg-slate-200:hover { background-color: var(--border-2) !important; }
+
+      /* Borders that are translucent in the markup (e.g. border-slate-200/70 → /80) */
+      html.dark [class*="border-slate-200/"] { border-color: var(--border) !important; }
+      html.dark [class*="border-slate-100/"] { border-color: var(--border) !important; }
+
+      /* Tinted status chips read better with a touch more depth on dark — keep the
+         hue but drop the bright pastel fill so it doesn't glare against charcoal. */
+      html.dark .bg-blue-50,
+      html.dark .bg-brand-50   { background-color: rgba(76,108,163,0.18) !important; }
+      html.dark .bg-emerald-50,
+      html.dark .bg-green-50   { background-color: rgba(16,185,129,0.15) !important; }
+      html.dark .bg-emerald-100,
+      html.dark .bg-green-100  { background-color: rgba(16,185,129,0.20) !important; }
+      html.dark .bg-red-50     { background-color: rgba(239,68,68,0.15)  !important; }
+      html.dark .bg-red-100    { background-color: rgba(239,68,68,0.20)  !important; }
+      html.dark .bg-amber-50   { background-color: rgba(245,158,11,0.15) !important; }
+      html.dark .bg-blue-100   { background-color: rgba(76,108,163,0.22) !important; }
+      /* Slightly brighten chip text so it stays legible on the translucent fills. */
+      html.dark .text-emerald-700, html.dark .text-green-700, html.dark .text-green-800 { color: #5EE0A8 !important; }
+      html.dark .text-red-700,     html.dark .text-red-800   { color: #FF8A8A !important; }
+      html.dark .text-amber-700  { color: #F5C26B !important; }
+      html.dark .text-blue-700,    html.dark .text-brand-700 { color: #9DB8E8 !important; }
+
+      /* Dark scrollbars */
+      html.dark ::-webkit-scrollbar-thumb { background: #3E4654; }
+      html.dark ::-webkit-scrollbar-thumb:hover { background: #4A5466; }
+
+      /* Smooth the flip between themes (but not on initial load). */
+      html.theme-ready body,
+      html.theme-ready .bg-white,
+      html.theme-ready .bg-slate-50,
+      html.theme-ready .bg-slate-100 {
+        transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+      }
 
       @media (prefers-reduced-motion: reduce) {
         .animate-fade-in, .animate-slide-up, .animate-page-in { animation: none; }
