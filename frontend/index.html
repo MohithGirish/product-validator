@@ -67,6 +67,13 @@
       html { height: 100%; }
       body { min-height: 100%; margin: 0; }
       #root { min-height: 100%; }
+
+      /* Bottom padding for the main content area. On mobile (< md / 768px) the fixed
+         bottom nav (~64px) overlays content, so clear it plus the device safe-area so
+         the last element (e.g. a submit button) is always reachable by scrolling.
+         At md+ there is no bottom nav, so a normal 2rem is enough. */
+      .main-content { padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px)); }
+      @media (min-width: 768px) { .main-content { padding-bottom: 2rem; } }
       /* Tabular figures for all data: prices, dates, barcodes, counters — prevents layout jitter */
       .font-mono, code, pre, table, .tabular-nums { font-variant-numeric: tabular-nums; }
 

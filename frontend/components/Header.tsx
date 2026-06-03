@@ -132,9 +132,6 @@ const Header: React.FC<HeaderProps> = ({ currentPage, setCurrentPage }) => {
           })}
         </div>
       </nav>
-
-      {/* Spacer so mobile content isn't hidden behind bottom nav */}
-      <div className="md:hidden h-16" aria-hidden="true" />
     </>
   );
 };
