@@ -4,6 +4,7 @@ import { ValidationRecord } from '../types';
 import { CheckCircleIcon } from './icons/CheckCircleIcon';
 import { XCircleIcon } from './icons/XCircleIcon';
 import { XIcon } from './icons/XIcon';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 interface ResultModalProps {
   isOpen: boolean;
@@ -12,6 +13,8 @@ interface ResultModalProps {
 }
 
 const ResultModal: React.FC<ResultModalProps> = ({ isOpen, onClose, result }) => {
+  useBodyScrollLock(isOpen);
+
   if (!isOpen || !result) return null;
 
   const isValid = result.isValid;
@@ -32,13 +35,13 @@ const ResultModal: React.FC<ResultModalProps> = ({ isOpen, onClose, result }) =>
 
   return (
     <div
-      className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 p-4 animate-fade-in"
+      className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 p-4 overflow-y-auto animate-fade-in"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label={isValid ? 'Validation Successful' : 'Validation Failed'}
     >
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md my-auto" onClick={(e) => e.stopPropagation()}>
         {/* Close */}
         <button
           onClick={onClose}

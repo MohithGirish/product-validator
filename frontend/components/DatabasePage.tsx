@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { ProductData } from '../types';
 import { databaseService } from '../services/databaseService';
 import { extractProductInfoFromImage, extractBatchFormatFromImage } from '../services/imageExtractionService';
@@ -140,10 +141,11 @@ export const ProductFormModal: React.FC<{
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    useBodyScrollLock(isOpen);
 
     if (!isOpen) return null;
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
         
         if (type === 'checkbox' && e.target instanceof HTMLInputElement) {
@@ -341,12 +343,14 @@ export const ProductFormModal: React.FC<{
     }
 
     const renderBarcodeScanner = () => (
-        <form onSubmit={handleBarcodeSubmit} className="p-6 sm:p-8 max-h-[90vh] overflow-y-auto hide-scrollbar">
+        <form onSubmit={handleBarcodeSubmit} className="flex flex-col min-h-0 flex-1">
+            <button type="button" onClick={onClose} className="absolute top-4 right-4 z-10 h-8 w-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors" aria-label="Close"><XIcon /></button>
+
+            <div className="p-6 sm:p-8 overflow-y-auto hide-scrollbar">
             <div className="mb-6">
                 <h2 className="text-lg font-semibold text-slate-900 tracking-tight">{getModalTitle()}</h2>
                 <p className="text-sm text-slate-500 mt-1">Scan the product barcode to begin.</p>
             </div>
-            <button type="button" onClick={onClose} className="absolute top-4 right-4 h-8 w-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors" aria-label="Close"><XIcon /></button>
 
             <div
                 className="flex justify-center items-center px-6 py-10 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-200 group border-slate-300 hover:border-blue-500 hover:bg-blue-50/40"
@@ -414,16 +418,19 @@ export const ProductFormModal: React.FC<{
                     </button>
                 </div>
             </div>
+            </div>
         </form>
     );
 
     const renderDetailsForm = () => (
-        <form onSubmit={handleSubmit} className="p-6 sm:p-8 max-h-[90vh] overflow-y-auto hide-scrollbar">
+        <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
+            <button type="button" onClick={onClose} className="absolute top-4 right-4 z-10 h-8 w-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors" aria-label="Close"><XIcon /></button>
+
+            <div className="p-6 sm:p-8 overflow-y-auto hide-scrollbar">
             <div className="mb-6">
                 <h2 className="text-lg font-semibold text-slate-900 tracking-tight">{getModalTitle()}</h2>
                 <p className="text-sm text-slate-500 mt-1">Configure product metadata, batch format, and shelf-life.</p>
             </div>
-            <button type="button" onClick={onClose} className="absolute top-4 right-4 h-8 w-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors" aria-label="Close"><XIcon /></button>
 
             <div className="space-y-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -460,23 +467,6 @@ export const ProductFormModal: React.FC<{
                         </button>
                     )}
                 </div>
-
-                {product?.batchInfoText && (
-                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
-                        <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 text-center">Expected Information Block</h4>
-                        <div className="whitespace-pre-wrap text-left text-slate-800 text-sm font-mono bg-white p-3 rounded-lg border border-slate-200 max-h-40 overflow-y-auto">
-                            {generalizedBatchInfoBlock(product.batchInfoText || '').split('\n').map((line, index) => <div key={index}>{line}</div>)}
-                        </div>
-                        <div className="mt-3 text-center">
-                            <p className="text-xs text-slate-500">Generalized reference format currently in the database.</p>
-                            {product.batchNumberFormat && (
-                                <p className="mt-1.5 text-xs text-slate-600">
-                                    <span className="font-semibold text-slate-700">Saved format:</span> <span className="font-mono text-sm bg-slate-100 text-slate-800 px-2 py-0.5 rounded">{product.batchNumberFormat}</span>
-                                </p>
-                            )}
-                        </div>
-                    </div>
-                )}
 
                 {/* Batch format inference — visually distinct slate-50 section */}
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 space-y-4">
@@ -572,6 +562,37 @@ export const ProductFormModal: React.FC<{
                             </div>
                         </div>
                     )}
+
+                    {/* Full printed information block — the entire code as it appears on
+                        the label (batch + date line, PKD date, use-by date, MRP / ₹-per-gram).
+                        This whole block is stored and validated line-by-line on scan, so let
+                        the user see and correct it before saving. */}
+                    {(formData.batchInfoText || formData.batchNumberFormat) && (
+                        <div>
+                            <label htmlFor="batchInfoText" className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+                                Full Information Block
+                            </label>
+                            <p className="text-xs text-slate-500 mb-2">
+                                The complete printed code — batch &amp; date, PKD date, use-by date, MRP (with <span className="font-mono">/</span> and ₹-per-gram). Edit any line to fix OCR mistakes; the whole block is validated when scanning this product.
+                            </p>
+                            <textarea
+                                id="batchInfoText"
+                                name="batchInfoText"
+                                value={formData.batchInfoText}
+                                onChange={handleChange}
+                                rows={Math.min(8, Math.max(3, (formData.batchInfoText || '').split('\n').length + 1))}
+                                placeholder={'e.g.\n16:47 01B11\nPKD 01 NOV 24\nUSE BY 27 JAN 25\nMRP 100/- (₹10/g)'}
+                                spellCheck={false}
+                                className="w-full px-3 py-2.5 bg-white text-sm font-mono text-slate-900 placeholder-slate-400 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition resize-y leading-relaxed"
+                            />
+                            {formData.batchInfoText && (
+                                <div className="mt-2">
+                                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Generalized pattern (what gets matched)</p>
+                                    <pre className="whitespace-pre-wrap text-xs font-mono text-slate-600 bg-white border border-slate-200 rounded-lg p-2.5 leading-relaxed">{generalizedBatchInfoBlock(formData.batchInfoText)}</pre>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 <div className="border-t border-slate-100 pt-5">
@@ -637,16 +658,17 @@ export const ProductFormModal: React.FC<{
                     </div>
                 </div>
             </div>
-            <div className="mt-8 flex justify-end gap-3 border-t border-slate-100 bg-slate-50 -mx-6 -mb-6 px-6 py-4 rounded-b-xl sm:-mx-8 sm:-mb-8 sm:px-8 sm:py-5">
-                <button type="button" onClick={onClose} className="bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm px-4 py-2.5 rounded-lg border border-slate-200 transition-colors">Cancel</button>
-                <button type="submit" className="press bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-lg shadow-sm">Save Product</button>
+            </div>
+            <div className="flex-shrink-0 flex justify-end gap-3 border-t border-slate-100 bg-slate-50 px-6 py-4 rounded-b-2xl sm:px-8 sm:py-5">
+                <button type="button" onClick={onClose} className="flex-1 sm:flex-none bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm px-4 py-2.5 rounded-lg border border-slate-200 transition-colors">Cancel</button>
+                <button type="submit" className="press flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-lg shadow-sm">Save Product</button>
             </div>
         </form>
     );
 
     return (
-        <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-40 p-4 animate-fade-in" onClick={onClose}>
-            <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl animate-slide-up" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-40 p-3 sm:p-4 animate-fade-in" onClick={onClose}>
+            <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden animate-slide-up" onClick={(e) => e.stopPropagation()}>
                 {step === 'barcode' ? renderBarcodeScanner() : renderDetailsForm()}
             </div>
             <CameraModal
@@ -664,11 +686,13 @@ const DeleteConfirmationModal: React.FC<{
     onConfirm: () => void;
     product: ProductData | null;
 }> = ({ isOpen, onClose, onConfirm, product }) => {
+    useBodyScrollLock(isOpen && !!product);
+
     if (!isOpen || !product) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 p-4 animate-fade-in" onClick={onClose}>
-            <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md animate-slide-up" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 p-4 overflow-y-auto animate-fade-in" onClick={onClose}>
+            <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md my-auto animate-slide-up" onClick={(e) => e.stopPropagation()}>
                 <div className="p-6 sm:p-7">
                     <div className="flex items-center gap-3 mb-4">
                         <div className="h-12 w-12 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0 ring-4 ring-red-50/60">
@@ -840,77 +864,133 @@ const DatabasePage: React.FC = () => {
                     <div className="text-blue-600"><Spinner /></div>
                     <p className="mt-3 text-sm font-semibold text-slate-700">Loading products…</p>
                 </div>
+            ) : filteredProducts.length === 0 ? (
+                <div className="bg-white rounded-xl border border-slate-200/70 shadow-card px-6 py-16 text-center">
+                    <div className="h-14 w-14 rounded-xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                        <SearchIcon className="h-7 w-7 text-slate-400" />
+                    </div>
+                    <p className="text-sm font-semibold text-slate-800">No products found</p>
+                    <p className="text-sm text-slate-400 mt-1">Try a different search term or add a new product.</p>
+                </div>
             ) : (
-                <div className="bg-white rounded-xl border border-slate-200/70 shadow-card overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
-                            <thead className="border-b border-slate-200 bg-slate-50">
-                                <tr>
-                                    <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Product Name</th>
-                                    <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Barcode</th>
-                                    <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Market</th>
-                                    <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Batch Format</th>
-                                    <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">MRP (₹)</th>
-                                    <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Shelf Life</th>
+                <>
+                    {/* ── Mobile: card list (no horizontal scroll, tap-friendly actions) ── */}
+                    <div className="md:hidden space-y-3">
+                        {filteredProducts.map(p => (
+                            <div key={p.id} className="bg-white rounded-xl border border-slate-200/70 shadow-card p-4">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                        <p className="font-semibold text-slate-900 leading-snug break-words">{p.productName}</p>
+                                        <span className={`inline-block mt-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${
+                                            p.marketType === 'modern'
+                                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                              : 'bg-slate-100 text-slate-600 border border-slate-200'
+                                        }`}>{p.marketType}</span>
+                                    </div>
                                     {user?.role === 'admin' && (
-                                        <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide text-right">Actions</th>
+                                        <div className="flex gap-1 flex-shrink-0 -mr-1.5 -mt-1.5">
+                                            <button
+                                                onClick={() => handleOpenModal(p)}
+                                                className="press h-10 w-10 rounded-lg flex items-center justify-center text-slate-500 hover:text-blue-600 hover:bg-blue-50 active:bg-blue-50 transition-colors"
+                                                aria-label="Edit product"
+                                            >
+                                                <PencilIcon className="w-5 h-5" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleRequestDelete(p)}
+                                                className="press h-10 w-10 rounded-lg flex items-center justify-center text-slate-500 hover:text-red-600 hover:bg-red-50 active:bg-red-50 transition-colors"
+                                                aria-label="Delete product"
+                                            >
+                                                <TrashIcon className="w-5 h-5" />
+                                            </button>
+                                        </div>
                                     )}
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {filteredProducts.map(p => (
-                                    <tr key={p.id} className="group hover:bg-slate-50 transition-colors">
-                                        <td className="px-5 py-4 font-semibold text-slate-900">{p.productName}</td>
-                                        <td className="px-5 py-4">
-                                            <span className="font-mono text-xs bg-slate-100 text-slate-800 px-2 py-0.5 rounded">{p.barcode}</span>
-                                        </td>
-                                        <td className="px-5 py-4">
-                                            <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${
-                                                p.marketType === 'modern'
-                                                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                                                  : 'bg-slate-100 text-slate-600 border border-slate-200'
-                                            }`}>{p.marketType}</span>
-                                        </td>
-                                        <td className="px-5 py-4">
-                                            <span className="font-mono text-xs bg-slate-100 text-slate-800 px-2 py-0.5 rounded">{p.batchNumberFormat}</span>
-                                        </td>
-                                        <td className="px-5 py-4 text-slate-700">{p.mrpApplicable && p.mrp ? `₹${p.mrp.toFixed(2)}` : <span className="text-slate-400">—</span>}</td>
-                                        <td className="px-5 py-4 text-slate-700">{p.shelfLife && p.shelfLifeUnit ? `${p.shelfLife} ${p.shelfLifeUnit}` : <span className="text-slate-400">—</span>}</td>
+                                </div>
+                                <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5 text-sm">
+                                    <div className="col-span-2 flex flex-col">
+                                        <dt className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Barcode</dt>
+                                        <dd className="mt-0.5"><span className="font-mono text-xs bg-slate-100 text-slate-800 px-2 py-0.5 rounded break-all">{p.barcode}</span></dd>
+                                    </div>
+                                    <div className="col-span-2 flex flex-col">
+                                        <dt className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Batch Format</dt>
+                                        <dd className="mt-0.5"><span className="font-mono text-xs bg-slate-100 text-slate-800 px-2 py-0.5 rounded break-all">{p.batchNumberFormat}</span></dd>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <dt className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">MRP (₹)</dt>
+                                        <dd className="mt-0.5 text-slate-700">{p.mrpApplicable && p.mrp ? `₹${p.mrp.toFixed(2)}` : <span className="text-slate-400">—</span>}</dd>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <dt className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Shelf Life</dt>
+                                        <dd className="mt-0.5 text-slate-700">{p.shelfLife && p.shelfLifeUnit ? `${p.shelfLife} ${p.shelfLifeUnit}` : <span className="text-slate-400">—</span>}</dd>
+                                    </div>
+                                </dl>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* ── Desktop / tablet: full table ── */}
+                    <div className="hidden md:block bg-white rounded-xl border border-slate-200/70 shadow-card overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left">
+                                <thead className="border-b border-slate-200 bg-slate-50">
+                                    <tr>
+                                        <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Product Name</th>
+                                        <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Barcode</th>
+                                        <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Market</th>
+                                        <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Batch Format</th>
+                                        <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">MRP (₹)</th>
+                                        <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Shelf Life</th>
                                         {user?.role === 'admin' && (
-                                            <td className="px-5 py-4 text-right">
-                                                <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-                                                    <button
-                                                        onClick={() => handleOpenModal(p)}
-                                                        className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                                                        aria-label="Edit product"
-                                                    >
-                                                        <PencilIcon className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleRequestDelete(p)}
-                                                        className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                                                        aria-label="Delete product"
-                                                    >
-                                                        <TrashIcon className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            </td>
+                                            <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide text-right">Actions</th>
                                         )}
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                        {filteredProducts.length === 0 && (
-                            <div className="px-6 py-16 text-center">
-                                <div className="h-14 w-14 rounded-xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
-                                    <SearchIcon className="h-7 w-7 text-slate-400" />
-                                </div>
-                                <p className="text-sm font-semibold text-slate-800">No products found</p>
-                                <p className="text-sm text-slate-400 mt-1">Try a different search term or add a new product.</p>
-                            </div>
-                        )}
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {filteredProducts.map(p => (
+                                        <tr key={p.id} className="group hover:bg-slate-50 transition-colors">
+                                            <td className="px-5 py-4 font-semibold text-slate-900">{p.productName}</td>
+                                            <td className="px-5 py-4">
+                                                <span className="font-mono text-xs bg-slate-100 text-slate-800 px-2 py-0.5 rounded">{p.barcode}</span>
+                                            </td>
+                                            <td className="px-5 py-4">
+                                                <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${
+                                                    p.marketType === 'modern'
+                                                      ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                                      : 'bg-slate-100 text-slate-600 border border-slate-200'
+                                                }`}>{p.marketType}</span>
+                                            </td>
+                                            <td className="px-5 py-4">
+                                                <span className="font-mono text-xs bg-slate-100 text-slate-800 px-2 py-0.5 rounded">{p.batchNumberFormat}</span>
+                                            </td>
+                                            <td className="px-5 py-4 text-slate-700">{p.mrpApplicable && p.mrp ? `₹${p.mrp.toFixed(2)}` : <span className="text-slate-400">—</span>}</td>
+                                            <td className="px-5 py-4 text-slate-700">{p.shelfLife && p.shelfLifeUnit ? `${p.shelfLife} ${p.shelfLifeUnit}` : <span className="text-slate-400">—</span>}</td>
+                                            {user?.role === 'admin' && (
+                                                <td className="px-5 py-4 text-right">
+                                                    <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                                                        <button
+                                                            onClick={() => handleOpenModal(p)}
+                                                            className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                                                            aria-label="Edit product"
+                                                        >
+                                                            <PencilIcon className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleRequestDelete(p)}
+                                                            className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                                            aria-label="Delete product"
+                                                        >
+                                                            <TrashIcon className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            )}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
+                </>
             )}
         </div>
     );

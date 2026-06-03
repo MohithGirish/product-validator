@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { XIcon } from '../icons/XIcon';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 interface ModalProps {
   isOpen: boolean;
@@ -28,6 +29,8 @@ const Modal: React.FC<ModalProps> = ({
   footer,
   maxWidthClass = 'max-w-lg',
 }) => {
+  useBodyScrollLock(isOpen);
+
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -39,18 +42,18 @@ const Modal: React.FC<ModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto bg-slate-900/50 backdrop-blur-sm animate-fade-in"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label={title}
     >
       <div
-        className={`relative w-full ${maxWidthClass} bg-white rounded-2xl shadow-card-lg ring-1 ring-slate-900/5 overflow-hidden animate-slide-up`}
+        className={`relative w-full ${maxWidthClass} my-auto max-h-[calc(100dvh-2rem)] flex flex-col bg-white rounded-2xl shadow-card-lg ring-1 ring-slate-900/5 overflow-hidden animate-slide-up`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Navy header */}
-        <div className="relative px-6 py-5 text-white" style={{ background: 'linear-gradient(135deg, #15294E 0%, #1B3361 100%)' }}>
+        <div className="relative px-6 py-5 text-white flex-shrink-0" style={{ background: 'linear-gradient(135deg, #15294E 0%, #1B3361 100%)' }}>
           <div className="flex items-start gap-3">
             {icon && (
               <div className="h-9 w-9 rounded-lg bg-white/12 flex items-center justify-center flex-shrink-0">
@@ -72,11 +75,11 @@ const Modal: React.FC<ModalProps> = ({
         </div>
 
         {/* Body */}
-        <div className="px-6 py-5">{children}</div>
+        <div className="px-6 py-5 overflow-y-auto">{children}</div>
 
         {/* Footer */}
         {footer && (
-          <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+          <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3 flex-shrink-0">
             {footer}
           </div>
         )}

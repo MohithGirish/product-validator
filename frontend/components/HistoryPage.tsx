@@ -6,8 +6,11 @@ import { KeyboardIcon } from './icons/KeyboardIcon';
 import { databaseService } from '../services/databaseService';
 import { XIcon } from './icons/XIcon';
 import { useToast } from './common/Toast';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
-const ConfirmClearModal: React.FC<{ onConfirm: () => void; onCancel: () => void }> = ({ onConfirm, onCancel }) => (
+const ConfirmClearModal: React.FC<{ onConfirm: () => void; onCancel: () => void }> = ({ onConfirm, onCancel }) => {
+  useBodyScrollLock(true);
+  return (
   <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 p-4 animate-fade-in" onClick={onCancel}>
     <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6" onClick={(e) => e.stopPropagation()}>
       <div className="flex items-center gap-3 mb-4">
@@ -37,9 +40,12 @@ const ConfirmClearModal: React.FC<{ onConfirm: () => void; onCancel: () => void 
       </div>
     </div>
   </div>
-);
+  );
+};
 
 const ImageModal: React.FC<{ isOpen: boolean; onClose: () => void; imageUrl: string | null }> = ({ isOpen, onClose, imageUrl }) => {
+  useBodyScrollLock(isOpen && !!imageUrl);
+
   if (!isOpen || !imageUrl) return null;
 
   return (

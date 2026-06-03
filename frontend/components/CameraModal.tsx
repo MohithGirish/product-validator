@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { XIcon } from './icons/XIcon';
 import { CameraIcon } from './icons/CameraIcon';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 interface CameraModalProps {
   isOpen: boolean;
@@ -44,6 +45,8 @@ const CameraModal: React.FC<CameraModalProps> = ({ isOpen, onClose, onCapture })
     };
   }, [isOpen]);
 
+  useBodyScrollLock(isOpen);
+
   const handleCapture = () => {
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
@@ -69,9 +72,20 @@ const CameraModal: React.FC<CameraModalProps> = ({ isOpen, onClose, onCapture })
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex flex-col justify-center items-center z-50 p-4">
-      <div className="relative bg-black rounded-lg w-full max-w-3xl aspect-video overflow-hidden">
-        <button onClick={onClose} className="absolute top-3 right-3 text-white z-10 bg-black bg-opacity-50 rounded-full p-1.5 transition hover:bg-opacity-75">
+    // Stop propagation so taps inside the camera (capture/close) never bubble to a
+    // parent modal's backdrop-close handler when this is rendered nested inside one.
+    <div
+      className="fixed inset-0 bg-black z-50 flex flex-col sm:justify-center sm:items-center sm:p-4"
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* Camera viewport — fills the screen on mobile (portrait-friendly), boxed on larger screens. */}
+      <div className="relative bg-black flex-1 w-full sm:flex-none sm:max-w-3xl sm:aspect-video sm:rounded-lg overflow-hidden">
+        <button
+          onClick={onClose}
+          aria-label="Close camera"
+          className="absolute top-3 right-3 text-white z-10 bg-black/50 rounded-full p-2.5 transition hover:bg-black/75"
+          style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}
+        >
           <XIcon className="w-5 h-5" />
         </button>
         {error ? (
@@ -80,17 +94,37 @@ const CameraModal: React.FC<CameraModalProps> = ({ isOpen, onClose, onCapture })
           <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover"></video>
         )}
         <canvas ref={canvasRef} className="hidden"></canvas>
+
+        {/* Mobile: capture button overlaid at the bottom of the live view. */}
+        {!error && (
+          <div
+            className="sm:hidden absolute inset-x-0 bottom-0 flex justify-center pb-6 pt-10 bg-gradient-to-t from-black/60 to-transparent"
+            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem)' }}
+          >
+            <button
+              onClick={handleCapture}
+              aria-label="Capture Image"
+              className="w-[72px] h-[72px] rounded-full bg-white flex items-center justify-center border-4 border-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/50 active:scale-95 transition"
+            >
+              <div className="w-14 h-14 rounded-full bg-white active:bg-gray-200 flex items-center justify-center">
+                <CameraIcon className="w-7 h-7 text-gray-700" />
+              </div>
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* Desktop / tablet: capture button below the boxed viewport. */}
       {!error && (
-        <div className="mt-6">
-          <button 
+        <div className="hidden sm:block mt-6">
+          <button
             onClick={handleCapture}
             aria-label="Capture Image"
-            className="w-20 h-20 rounded-full bg-white flex items-center justify-center border-4 border-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50 transition"
+            className="w-20 h-20 rounded-full bg-white flex items-center justify-center border-4 border-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/50 transition"
           >
-             <div className="w-16 h-16 rounded-full bg-white active:bg-gray-200 flex items-center justify-center">
-                <CameraIcon className="w-8 h-8 text-gray-700" />
-             </div>
+            <div className="w-16 h-16 rounded-full bg-white active:bg-gray-200 flex items-center justify-center">
+              <CameraIcon className="w-8 h-8 text-gray-700" />
+            </div>
           </button>
         </div>
       )}

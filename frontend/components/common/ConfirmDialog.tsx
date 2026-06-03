@@ -1,4 +1,5 @@
 import React from 'react';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -26,6 +27,8 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onConfirm,
   onCancel,
 }) => {
+  useBodyScrollLock(isOpen);
+
   if (!isOpen) return null;
 
   const isDanger = variant === 'danger';
@@ -57,7 +60,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             </div>
           </div>
 
-          <div className="mt-6 flex justify-end gap-3">
+          <div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
             <button
               onClick={onCancel}
               className="bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm px-4 py-2.5 rounded-lg border border-slate-200 transition-colors"

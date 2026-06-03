@@ -18,7 +18,7 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-dvh bg-[#F4F6FA] overflow-x-hidden">
+    <div className="min-h-dvh bg-[#F4F6FA] overflow-x-hidden" style={{ paddingLeft: 'env(safe-area-inset-left, 0px)', paddingRight: 'env(safe-area-inset-right, 0px)' }}>
       <Header currentPage={currentPage} setCurrentPage={setCurrentPage} />
       {/* key on currentPage so each tab switch replays a subtle entrance — spatial continuity */}
       <main key={currentPage} className="p-4 sm:p-6 lg:p-8 pb-6 animate-page-in">

@@ -25,11 +25,11 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F6FA] flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl overflow-hidden max-w-4xl w-full flex flex-col md:flex-row min-h-[560px] shadow-card-lg ring-1 ring-slate-900/5">
+    <div className="min-h-dvh bg-[#F4F6FA] flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl overflow-hidden max-w-4xl w-full flex flex-col md:flex-row md:min-h-[560px] shadow-card-lg ring-1 ring-slate-900/5">
 
         {/* Left Side – Branding */}
-        <div className="md:w-5/12 relative flex flex-col justify-between p-10 text-white overflow-hidden">
+        <div className="md:w-5/12 relative flex flex-col justify-between p-7 sm:p-10 text-white overflow-hidden">
           <div className="absolute inset-0 z-0" style={{ background: 'linear-gradient(150deg, #0C1830 0%, #15294E 55%, #1B3361 100%)' }} />
           {/* Subtle engineered grid texture — reads as "industrial", not decorative */}
           <div

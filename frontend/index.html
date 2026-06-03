@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Factory Product Code Validator</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -61,6 +61,12 @@
         -moz-osx-font-smoothing: grayscale;
         text-rendering: optimizeLegibility;
       }
+      /* Make the app fill the window edge to edge so the page background never
+         shows as a lighter strip below short content. Percentage heights track the
+         real layout viewport exactly (dvh/vh can under-resolve and leave a gap). */
+      html { height: 100%; }
+      body { min-height: 100%; margin: 0; }
+      #root { min-height: 100%; }
       /* Tabular figures for all data: prices, dates, barcodes, counters — prevents layout jitter */
       .font-mono, code, pre, table, .tabular-nums { font-variant-numeric: tabular-nums; }
 

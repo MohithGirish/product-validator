@@ -28,7 +28,10 @@ const Header: React.FC<HeaderProps> = ({ currentPage, setCurrentPage }) => {
   return (
     <>
       {/* ── Desktop / Tablet Header ───────────────────────── */}
-      <header className="bg-white/90 border-b border-slate-200/80 sticky top-0 z-30 backdrop-blur-md shadow-[0_1px_2px_rgba(12,24,48,0.04)]">
+      <header
+        className="bg-white/90 border-b border-slate-200/80 sticky top-0 z-30 backdrop-blur-md shadow-[0_1px_2px_rgba(12,24,48,0.04)]"
+        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14">
             {/* Logo — official ITC mark + product wordmark */}

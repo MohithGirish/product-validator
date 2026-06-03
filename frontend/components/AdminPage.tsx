@@ -262,65 +262,116 @@ const AdminPage: React.FC = () => {
                     <p className="text-sm text-slate-400 mt-1">When users perform validations, they will appear here.</p>
                 </div>
             ) : (
-                <div className="bg-white border border-slate-200/70 rounded-xl shadow-card overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
-                            <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200">
-                                <tr>
-                                    <th scope="col" className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
-                                    <th scope="col" className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">User</th>
-                                    <th scope="col" className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Timestamp</th>
-                                    <th scope="col" className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Product</th>
-                                    <th scope="col" className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Batch</th>
-                                    <th scope="col" className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Barcode</th>
-                                    <th scope="col" className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Prod / Exp</th>
-                                    <th scope="col" className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">MRP</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {history.map((record) => (
-                                    <tr key={record.id} className="bg-white hover:bg-slate-50 transition-colors">
-                                        <td className="px-5 py-3.5">
-                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide ${
-                                                record.isValid
-                                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                                  : 'bg-red-50 text-red-700 border border-red-200'
-                                            }`}>
-                                                <span className={`h-1.5 w-1.5 rounded-full ${record.isValid ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                                                {record.isValid ? 'Valid' : 'Invalid'}
-                                            </span>
-                                        </td>
-                                        <td className="px-5 py-3.5 font-semibold text-slate-900 whitespace-nowrap">{usernameById(record.userId)}</td>
-                                        <td className="px-5 py-3.5 whitespace-nowrap text-slate-600">
-                                            <div className="flex flex-col leading-tight">
-                                                <span className="text-xs font-medium text-slate-700">{new Date(record.timestamp).toLocaleDateString()}</span>
-                                                <span className="text-[11px] text-slate-400">{new Date(record.timestamp).toLocaleTimeString()}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-5 py-3.5 text-slate-700">{record.productName || <span className="text-slate-400">—</span>}</td>
-                                        <td className="px-5 py-3.5">
-                                            {record.extractedBatch
-                                                ? <span className="font-mono text-xs bg-slate-100 text-slate-800 px-2 py-0.5 rounded">{record.extractedBatch}</span>
-                                                : <span className="text-slate-400">—</span>}
-                                        </td>
-                                        <td className="px-5 py-3.5">
-                                            {record.extractedBarcode
-                                                ? <span className="font-mono text-xs bg-slate-100 text-slate-800 px-2 py-0.5 rounded">{record.extractedBarcode}</span>
-                                                : <span className="text-slate-400">—</span>}
-                                        </td>
-                                        <td className="px-5 py-3.5 whitespace-nowrap">
-                                            <div className="flex flex-col gap-0.5">
-                                                <span className="text-xs font-mono text-slate-700"><span className="text-slate-400 mr-1">P:</span>{record.extractedProductionDate || '—'}</span>
-                                                <span className="text-xs font-mono text-slate-700"><span className="text-slate-400 mr-1">E:</span>{record.extractedExpiryDate || '—'}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-5 py-3.5 font-mono text-xs text-slate-700">{record.extractedPrice || <span className="text-slate-400 font-sans">—</span>}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                <>
+                    {/* ── Mobile: card list ── */}
+                    <div className="md:hidden space-y-3">
+                        {history.map((record) => (
+                            <div key={record.id} className={`bg-white rounded-xl border border-slate-200/70 shadow-card p-4 border-l-4 ${record.isValid ? 'border-l-emerald-500' : 'border-l-red-400'}`}>
+                                <div className="flex items-start justify-between gap-2">
+                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide ${
+                                        record.isValid
+                                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                          : 'bg-red-50 text-red-700 border border-red-200'
+                                    }`}>
+                                        <span className={`h-1.5 w-1.5 rounded-full ${record.isValid ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                                        {record.isValid ? 'Valid' : 'Invalid'}
+                                    </span>
+                                    <span className="text-[11px] text-slate-400 text-right whitespace-nowrap">{new Date(record.timestamp).toLocaleString()}</span>
+                                </div>
+                                {record.productName && (
+                                    <p className="mt-2 text-sm font-bold text-slate-900 leading-snug">{record.productName}</p>
+                                )}
+                                <dl className="mt-2.5 grid grid-cols-2 gap-x-4 gap-y-2">
+                                    <div className="flex flex-col">
+                                        <dt className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">User</dt>
+                                        <dd className="text-xs font-semibold text-slate-700 truncate">{usernameById(record.userId)}</dd>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <dt className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">MRP</dt>
+                                        <dd className="text-xs font-mono text-slate-700">{record.extractedPrice || '—'}</dd>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <dt className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Batch</dt>
+                                        <dd className="text-xs font-mono text-slate-700 break-all">{record.extractedBatch || '—'}</dd>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <dt className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Barcode</dt>
+                                        <dd className="text-xs font-mono text-slate-700 break-all">{record.extractedBarcode || '—'}</dd>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <dt className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Prod. Date</dt>
+                                        <dd className="text-xs font-mono text-slate-700">{record.extractedProductionDate || '—'}</dd>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <dt className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Exp. Date</dt>
+                                        <dd className="text-xs font-mono text-slate-700">{record.extractedExpiryDate || '—'}</dd>
+                                    </div>
+                                </dl>
+                            </div>
+                        ))}
                     </div>
-                </div>
+
+                    {/* ── Desktop / tablet: full table ── */}
+                    <div className="hidden md:block bg-white border border-slate-200/70 rounded-xl shadow-card overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left">
+                                <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200">
+                                    <tr>
+                                        <th scope="col" className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
+                                        <th scope="col" className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">User</th>
+                                        <th scope="col" className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Timestamp</th>
+                                        <th scope="col" className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Product</th>
+                                        <th scope="col" className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Batch</th>
+                                        <th scope="col" className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Barcode</th>
+                                        <th scope="col" className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Prod / Exp</th>
+                                        <th scope="col" className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">MRP</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {history.map((record) => (
+                                        <tr key={record.id} className="bg-white hover:bg-slate-50 transition-colors">
+                                            <td className="px-5 py-3.5">
+                                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide ${
+                                                    record.isValid
+                                                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                                      : 'bg-red-50 text-red-700 border border-red-200'
+                                                }`}>
+                                                    <span className={`h-1.5 w-1.5 rounded-full ${record.isValid ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                                                    {record.isValid ? 'Valid' : 'Invalid'}
+                                                </span>
+                                            </td>
+                                            <td className="px-5 py-3.5 font-semibold text-slate-900 whitespace-nowrap">{usernameById(record.userId)}</td>
+                                            <td className="px-5 py-3.5 whitespace-nowrap text-slate-600">
+                                                <div className="flex flex-col leading-tight">
+                                                    <span className="text-xs font-medium text-slate-700">{new Date(record.timestamp).toLocaleDateString()}</span>
+                                                    <span className="text-[11px] text-slate-400">{new Date(record.timestamp).toLocaleTimeString()}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-5 py-3.5 text-slate-700">{record.productName || <span className="text-slate-400">—</span>}</td>
+                                            <td className="px-5 py-3.5">
+                                                {record.extractedBatch
+                                                    ? <span className="font-mono text-xs bg-slate-100 text-slate-800 px-2 py-0.5 rounded">{record.extractedBatch}</span>
+                                                    : <span className="text-slate-400">—</span>}
+                                            </td>
+                                            <td className="px-5 py-3.5">
+                                                {record.extractedBarcode
+                                                    ? <span className="font-mono text-xs bg-slate-100 text-slate-800 px-2 py-0.5 rounded">{record.extractedBarcode}</span>
+                                                    : <span className="text-slate-400">—</span>}
+                                            </td>
+                                            <td className="px-5 py-3.5 whitespace-nowrap">
+                                                <div className="flex flex-col gap-0.5">
+                                                    <span className="text-xs font-mono text-slate-700"><span className="text-slate-400 mr-1">P:</span>{record.extractedProductionDate || '—'}</span>
+                                                    <span className="text-xs font-mono text-slate-700"><span className="text-slate-400 mr-1">E:</span>{record.extractedExpiryDate || '—'}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-5 py-3.5 font-mono text-xs text-slate-700">{record.extractedPrice || <span className="text-slate-400 font-sans">—</span>}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </>
             )}
 
             {/* ── Add User modal ─────────────────────────────────────────── */}

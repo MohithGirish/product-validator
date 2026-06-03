@@ -13,6 +13,7 @@ import { CameraIcon } from './icons/CameraIcon';
 import { CheckCircleIcon } from './icons/CheckCircleIcon';
 import { ProductFormModal } from './DatabasePage';
 import { validateFullCode } from '../utils/validateProduct';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 /* ── Step Progress Indicator ─────────────────────────────── */
 const StepIndicator: React.FC<{ step: 'barcode' | 'market_select' | 'batch' }> = ({ step }) => {
@@ -186,6 +187,10 @@ const ValidatorPage: React.FC = () => {
   const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
   const [showBarcodeSuccessPopup, setShowBarcodeSuccessPopup] = useState(false);
   const [isProductNotFoundModalOpen, setIsProductNotFoundModalOpen] = useState(false);
+
+  // Lock background scroll for the inline overlays this page owns directly
+  // (success popup / not-found). Child components lock for their own modals.
+  useBodyScrollLock(showBarcodeSuccessPopup || isProductNotFoundModalOpen);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
