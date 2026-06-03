@@ -14,6 +14,7 @@ import { CheckCircleIcon } from './icons/CheckCircleIcon';
 import { ProductFormModal } from './DatabasePage';
 import { validateFullCode } from '../utils/validateProduct';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
+import Portal from './common/Portal';
 
 /* ── Step Progress Indicator ─────────────────────────────── */
 const StepIndicator: React.FC<{ step: 'barcode' | 'market_select' | 'batch' }> = ({ step }) => {
@@ -62,7 +63,8 @@ const ProductNotFoundModal: React.FC<{ isOpen: boolean; onClose: () => void; }> 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 p-4 animate-fade-in" onClick={onClose}>
+    <Portal>
+    <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-[60] p-4 animate-fade-in" onClick={onClose}>
       <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
         <div className="p-6 text-center">
             <div className="h-14 w-14 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
@@ -79,6 +81,7 @@ const ProductNotFoundModal: React.FC<{ isOpen: boolean; onClose: () => void; }> 
         </div>
       </div>
     </div>
+    </Portal>
   );
 };
 
@@ -365,7 +368,8 @@ const ValidatorPage: React.FC = () => {
     <>
       {/* Product Identified Popup */}
       {showBarcodeSuccessPopup && foundProduct && (
-        <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 p-4 animate-fade-in">
+        <Portal>
+        <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-[60] p-4 animate-fade-in">
           <div className="bg-white rounded-2xl shadow-2xl border-t-4 border-emerald-500 w-full max-w-sm p-5 text-center animate-slide-up">
             <div className="h-14 w-14 rounded-full bg-emerald-50 ring-4 ring-emerald-50/60 flex items-center justify-center mx-auto mb-3">
                 <CheckCircleIcon className="h-8 w-8 text-emerald-500" />
@@ -388,6 +392,7 @@ const ValidatorPage: React.FC = () => {
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
       <div className="max-w-2xl mx-auto">

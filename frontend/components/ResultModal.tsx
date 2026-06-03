@@ -5,6 +5,7 @@ import { CheckCircleIcon } from './icons/CheckCircleIcon';
 import { XCircleIcon } from './icons/XCircleIcon';
 import { XIcon } from './icons/XIcon';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
+import Portal from './common/Portal';
 
 interface ResultModalProps {
   isOpen: boolean;
@@ -34,8 +35,9 @@ const ResultModal: React.FC<ResultModalProps> = ({ isOpen, onClose, result }) =>
   ];
 
   return (
+    <Portal>
     <div
-      className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 p-4 overflow-y-auto animate-fade-in"
+      className="fixed inset-0 bg-black/60 flex justify-center items-center z-[60] p-4 overflow-y-auto animate-fade-in"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -152,6 +154,7 @@ const ResultModal: React.FC<ResultModalProps> = ({ isOpen, onClose, result }) =>
         </div>
       </div>
     </div>
+    </Portal>
   );
 };
 

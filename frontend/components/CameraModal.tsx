@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { XIcon } from './icons/XIcon';
 import { CameraIcon } from './icons/CameraIcon';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
+import Portal from './common/Portal';
 
 interface CameraModalProps {
   isOpen: boolean;
@@ -72,10 +73,11 @@ const CameraModal: React.FC<CameraModalProps> = ({ isOpen, onClose, onCapture })
   if (!isOpen) return null;
 
   return (
-    // Stop propagation so taps inside the camera (capture/close) never bubble to a
-    // parent modal's backdrop-close handler when this is rendered nested inside one.
+    <Portal>
+    {/* Stop propagation so taps inside the camera (capture/close) never bubble to a
+        parent modal's backdrop-close handler when this is rendered nested inside one. */}
     <div
-      className="fixed inset-0 bg-black z-50 flex flex-col sm:justify-center sm:items-center sm:p-4"
+      className="fixed inset-0 bg-black z-[70] flex flex-col sm:justify-center sm:items-center sm:p-4"
       onClick={(e) => e.stopPropagation()}
     >
       {/* Camera viewport — fills the screen on mobile (portrait-friendly), boxed on larger screens. */}
@@ -129,6 +131,7 @@ const CameraModal: React.FC<CameraModalProps> = ({ isOpen, onClose, onCapture })
         </div>
       )}
     </div>
+    </Portal>
   );
 };
 

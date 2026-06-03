@@ -1,5 +1,6 @@
 import React from 'react';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
+import Portal from './Portal';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -34,8 +35,9 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   const isDanger = variant === 'danger';
 
   return (
+    <Portal>
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in"
       onClick={onCancel}
       role="alertdialog"
       aria-modal="true"
@@ -79,6 +81,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         </div>
       </div>
     </div>
+    </Portal>
   );
 };
 

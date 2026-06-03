@@ -7,11 +7,13 @@ import { databaseService } from '../services/databaseService';
 import { XIcon } from './icons/XIcon';
 import { useToast } from './common/Toast';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
+import Portal from './common/Portal';
 
 const ConfirmClearModal: React.FC<{ onConfirm: () => void; onCancel: () => void }> = ({ onConfirm, onCancel }) => {
   useBodyScrollLock(true);
   return (
-  <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 p-4 animate-fade-in" onClick={onCancel}>
+  <Portal>
+  <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-[60] p-4 animate-fade-in" onClick={onCancel}>
     <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6" onClick={(e) => e.stopPropagation()}>
       <div className="flex items-center gap-3 mb-4">
         <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
@@ -40,6 +42,7 @@ const ConfirmClearModal: React.FC<{ onConfirm: () => void; onCancel: () => void 
       </div>
     </div>
   </div>
+  </Portal>
   );
 };
 
@@ -49,7 +52,8 @@ const ImageModal: React.FC<{ isOpen: boolean; onClose: () => void; imageUrl: str
   if (!isOpen || !imageUrl) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex justify-center items-center z-50 p-4 animate-fade-in" onClick={onClose}>
+    <Portal>
+    <div className="fixed inset-0 bg-black/80 flex justify-center items-center z-[60] p-4 animate-fade-in" onClick={onClose}>
       <div className="relative" onClick={(e) => e.stopPropagation()}>
         <button
           onClick={onClose}
@@ -61,6 +65,7 @@ const ImageModal: React.FC<{ isOpen: boolean; onClose: () => void; imageUrl: str
         <img src={imageUrl} alt="Full size preview" className="max-h-[90vh] max-w-[90vw] object-contain rounded-xl" />
       </div>
     </div>
+    </Portal>
   );
 };
 

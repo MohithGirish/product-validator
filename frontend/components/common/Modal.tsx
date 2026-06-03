@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { XIcon } from '../icons/XIcon';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
+import Portal from './Portal';
 
 interface ModalProps {
   isOpen: boolean;
@@ -41,8 +42,9 @@ const Modal: React.FC<ModalProps> = ({
   if (!isOpen) return null;
 
   return (
+    <Portal>
     <div
-      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto bg-slate-900/50 backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-[60] flex items-start sm:items-center justify-center p-4 overflow-y-auto bg-slate-900/50 backdrop-blur-sm animate-fade-in"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -85,6 +87,7 @@ const Modal: React.FC<ModalProps> = ({
         )}
       </div>
     </div>
+    </Portal>
   );
 };
 

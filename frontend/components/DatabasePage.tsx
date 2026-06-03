@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
+import Portal from './common/Portal';
 import { ProductData } from '../types';
 import { databaseService } from '../services/databaseService';
 import { extractProductInfoFromImage, extractBatchFormatFromImage } from '../services/imageExtractionService';
@@ -667,7 +668,8 @@ export const ProductFormModal: React.FC<{
     );
 
     return (
-        <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-40 p-3 sm:p-4 animate-fade-in" onClick={onClose}>
+        <Portal>
+        <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-[60] p-3 sm:p-4 animate-fade-in" onClick={onClose}>
             <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden animate-slide-up" onClick={(e) => e.stopPropagation()}>
                 {step === 'barcode' ? renderBarcodeScanner() : renderDetailsForm()}
             </div>
@@ -677,6 +679,7 @@ export const ProductFormModal: React.FC<{
                 onCapture={handleCameraCapture}
             />
         </div>
+        </Portal>
     );
 };
 
@@ -691,7 +694,8 @@ const DeleteConfirmationModal: React.FC<{
     if (!isOpen || !product) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 p-4 overflow-y-auto animate-fade-in" onClick={onClose}>
+        <Portal>
+        <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-[60] p-4 overflow-y-auto animate-fade-in" onClick={onClose}>
             <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md my-auto animate-slide-up" onClick={(e) => e.stopPropagation()}>
                 <div className="p-6 sm:p-7">
                     <div className="flex items-center gap-3 mb-4">
@@ -732,6 +736,7 @@ const DeleteConfirmationModal: React.FC<{
                 </div>
             </div>
         </div>
+        </Portal>
     );
 };
 
