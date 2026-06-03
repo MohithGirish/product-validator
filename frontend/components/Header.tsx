@@ -34,9 +34,12 @@ const Header: React.FC<HeaderProps> = ({ currentPage, setCurrentPage }) => {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14">
-            {/* Logo — official ITC mark + product wordmark */}
+            {/* Logo — official ITC mark + product wordmark. In dark mode the navy
+                mark sits on a subtle light chip so it stays legible on charcoal. */}
             <div className="flex items-center gap-2.5">
-              <img src="/itc-logo.png" alt="ITC Limited" className="h-8 w-auto object-contain flex-shrink-0" />
+              <span className="logo-chip flex items-center justify-center flex-shrink-0">
+                <img src="/itc-logo.png" alt="ITC Limited" className="h-8 w-auto object-contain" />
+              </span>
               <div className="hidden sm:flex items-center gap-2.5">
                 <span className="h-5 w-px bg-slate-200" aria-hidden="true" />
                 <span className="text-sm font-bold text-slate-900 tracking-tight leading-none">

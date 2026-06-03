@@ -132,34 +132,49 @@
       .press:active { transform: scale(0.98); }
 
       /* ──────────────────────────────────────────────────────────────────────
-         DARK THEME (slate-charcoal — a black/gray blend, never pure black).
-         The app uses hardcoded `white`/`slate-*` utilities everywhere, so rather
-         than touch ~275 call sites we globally retarget those exact utilities to
-         the dark palette under `html.dark`. Brand navy elements (text-white,
-         bg-slate-900/800, opacity variants like bg-white/95) are intentionally
-         NOT remapped here so headers/gradients keep their look.
+         DARK THEME — "graphite navy". A premium black/gray blend (never pure
+         black) with a faint navy lean that ties back to the ITC brand. Surfaces
+         step up in elevation (bg → surface → elevated) so cards, the header, and
+         modals read as distinct layers. The app uses hardcoded `white`/`slate-*`
+         utilities everywhere, so rather than touch ~275 call sites we globally
+         retarget those exact utilities (incl. opacity variants on the header/nav)
+         to these tokens. Contrast tuned for WCAG AA in both modes.
          ────────────────────────────────────────────────────────────────────── */
       html.dark {
-        --bg:        #1A1D23;  /* app background        */
-        --surface:   #23272F;  /* cards / panels        */
-        --surface-2: #2A2F38;  /* slate-50/100 fills    */
-        --surface-3: #313742;  /* slate-200 fills       */
-        --border:    #333A45;  /* default borders       */
-        --border-2:  #3E4654;  /* stronger borders      */
-        --text:      #E8EAED;  /* primary text          */
-        --text-2:    #C2C8D2;  /* secondary text        */
-        --text-3:    #9AA3B2;  /* muted text            */
-        --text-4:    #6B7484;  /* faint text            */
+        --bg:        #14171C;  /* app background — deepest layer  */
+        --surface:   #1E222A;  /* cards / panels                  */
+        --surface-2: #262B34;  /* slate-50/100 fills, inputs      */
+        --surface-3: #2F3540;  /* slate-200 fills, hover          */
+        --elevated:  #21262F;  /* header / sticky bars (slightly lifted) */
+        --border:    #2E343F;  /* default borders / dividers      */
+        --border-2:  #3B424F;  /* stronger borders                */
+        --text:      #F1F3F6;  /* primary text  (~15:1)           */
+        --text-2:    #C7CDD8;  /* secondary text                  */
+        --text-3:    #9BA4B3;  /* muted text                      */
+        --text-4:    #717B8C;  /* faint text                      */
+        /* Brighter, more saturated primary so buttons pop on dark. */
+        --primary:        #3B6FD4;
+        --primary-hover:  #4C7DE0;
+        --on-primary:     #FFFFFF;
+        --ring:           #5B8DEF;
+        color-scheme: dark;
       }
 
       html.dark body { background-color: var(--bg); color: var(--text); }
 
-      /* Surfaces */
-      html.dark .bg-white       { background-color: var(--surface) !important; }
-      html.dark .bg-slate-50    { background-color: var(--surface-2) !important; }
-      html.dark .bg-slate-100   { background-color: var(--surface-2) !important; }
-      html.dark .bg-slate-200   { background-color: var(--surface-3) !important; }
-      html.dark .bg-\[\#F4F6FA\]{ background-color: var(--bg) !important; }
+      /* Surfaces (incl. translucent header/nav variants) */
+      html.dark .bg-white        { background-color: var(--surface) !important; }
+      html.dark [class*="bg-white/"] { background-color: color-mix(in srgb, var(--elevated) 92%, transparent) !important; }
+      html.dark .bg-slate-50     { background-color: var(--surface-2) !important; }
+      html.dark .bg-slate-100    { background-color: var(--surface-2) !important; }
+      html.dark .bg-slate-200    { background-color: var(--surface-3) !important; }
+      html.dark .bg-\[\#F4F6FA\] { background-color: var(--bg) !important; }
+      /* The login branding panel and modal headers keep their navy gradient; the
+         dark "Use Camera" / slate-900 buttons get a touch of lift so they don't
+         vanish into the page. */
+      html.dark .bg-slate-900    { background-color: #11151B !important; }
+      html.dark .bg-slate-800    { background-color: #1A1F27 !important; }
+      html.dark .hover\:bg-slate-800:hover { background-color: #232934 !important; }
 
       /* Text */
       html.dark .text-slate-900 { color: var(--text) !important; }
@@ -167,13 +182,15 @@
       html.dark .text-slate-700 { color: var(--text-2) !important; }
       html.dark .text-slate-600 { color: var(--text-2) !important; }
       html.dark .text-slate-500 { color: var(--text-3) !important; }
-      html.dark .text-slate-400 { color: var(--text-4) !important; }
+      html.dark .text-slate-400 { color: var(--text-3) !important; }   /* lift muted text for legibility */
 
-      /* Borders / dividers */
+      /* Borders / dividers (incl. translucent variants on header/cards) */
       html.dark .border-slate-50,
-      html.dark .border-slate-100 { border-color: var(--border) !important; }
+      html.dark .border-slate-100,
       html.dark .border-slate-200 { border-color: var(--border) !important; }
       html.dark .border-slate-300 { border-color: var(--border-2) !important; }
+      html.dark [class*="border-slate-200/"],
+      html.dark [class*="border-slate-100/"] { border-color: var(--border) !important; }
       html.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]) { border-color: var(--border) !important; }
 
       /* Inputs: placeholders + hover fills */
@@ -182,37 +199,52 @@
       html.dark .hover\:bg-slate-100:hover { background-color: var(--surface-3) !important; }
       html.dark .hover\:bg-slate-200:hover { background-color: var(--border-2) !important; }
 
-      /* Borders that are translucent in the markup (e.g. border-slate-200/70 → /80) */
-      html.dark [class*="border-slate-200/"] { border-color: var(--border) !important; }
-      html.dark [class*="border-slate-100/"] { border-color: var(--border) !important; }
+      /* Primary buttons — brighter, more saturated blue for a premium, visible CTA.
+         The app's `blue-600` is the brand navy (too dark on charcoal), so on dark
+         we lift it to a vivid blue and add a subtle depth shadow. */
+      html.dark .bg-blue-600 { background-color: var(--primary) !important; color: var(--on-primary) !important; }
+      html.dark .hover\:bg-blue-700:hover,
+      html.dark .bg-blue-700 { background-color: var(--primary-hover) !important; }
+      html.dark .bg-blue-600.shadow-sm,
+      html.dark .bg-blue-600.shadow-card { box-shadow: 0 2px 8px -1px rgba(59,111,212,0.45), 0 1px 2px rgba(0,0,0,0.4) !important; }
+      /* Avatar / soft-blue chips */
+      html.dark .bg-blue-100 { background-color: rgba(91,141,239,0.22) !important; }
+      html.dark .text-blue-700, html.dark .text-brand-700, html.dark .text-blue-600, html.dark .text-brand-600 { color: #9CC0FF !important; }
 
-      /* Tinted status chips read better with a touch more depth on dark — keep the
-         hue but drop the bright pastel fill so it doesn't glare against charcoal. */
+      /* Tinted status chips — keep the hue, drop the bright pastel fill, brighten
+         text so it clears AA against charcoal. */
       html.dark .bg-blue-50,
-      html.dark .bg-brand-50   { background-color: rgba(76,108,163,0.18) !important; }
+      html.dark .bg-brand-50   { background-color: rgba(91,141,239,0.16) !important; }
       html.dark .bg-emerald-50,
       html.dark .bg-green-50   { background-color: rgba(16,185,129,0.15) !important; }
       html.dark .bg-emerald-100,
-      html.dark .bg-green-100  { background-color: rgba(16,185,129,0.20) !important; }
+      html.dark .bg-green-100  { background-color: rgba(16,185,129,0.22) !important; }
       html.dark .bg-red-50     { background-color: rgba(239,68,68,0.15)  !important; }
-      html.dark .bg-red-100    { background-color: rgba(239,68,68,0.20)  !important; }
+      html.dark .bg-red-100    { background-color: rgba(239,68,68,0.22)  !important; }
       html.dark .bg-amber-50   { background-color: rgba(245,158,11,0.15) !important; }
-      html.dark .bg-blue-100   { background-color: rgba(76,108,163,0.22) !important; }
-      /* Slightly brighten chip text so it stays legible on the translucent fills. */
-      html.dark .text-emerald-700, html.dark .text-green-700, html.dark .text-green-800 { color: #5EE0A8 !important; }
-      html.dark .text-red-700,     html.dark .text-red-800   { color: #FF8A8A !important; }
-      html.dark .text-amber-700  { color: #F5C26B !important; }
-      html.dark .text-blue-700,    html.dark .text-brand-700 { color: #9DB8E8 !important; }
+      html.dark .text-emerald-700, html.dark .text-green-700, html.dark .text-green-800 { color: #4ADE9B !important; }
+      html.dark .text-red-700,     html.dark .text-red-800   { color: #FF9090 !important; }
+      html.dark .text-amber-700  { color: #F7C873 !important; }
+
+      /* Logo chip: transparent in light, a soft light pill in dark so the navy
+         ITC mark stays crisp and legible against the charcoal header. */
+      .logo-chip { padding: 0; border-radius: 8px; background: transparent; transition: background-color 0.2s ease, padding 0.2s ease; }
+      html.dark .logo-chip { background: #EEF2F8; padding: 3px 7px; box-shadow: 0 1px 2px rgba(0,0,0,0.35); }
+
+      /* Focus ring — brighter on dark for visibility. */
+      html.dark :focus-visible { outline-color: var(--ring); }
 
       /* Dark scrollbars */
-      html.dark ::-webkit-scrollbar-thumb { background: #3E4654; }
-      html.dark ::-webkit-scrollbar-thumb:hover { background: #4A5466; }
+      html.dark ::-webkit-scrollbar-thumb { background: #3B424F; }
+      html.dark ::-webkit-scrollbar-thumb:hover { background: #4A5363; }
 
       /* Smooth the flip between themes (but not on initial load). */
       html.theme-ready body,
       html.theme-ready .bg-white,
+      html.theme-ready [class*="bg-white/"],
       html.theme-ready .bg-slate-50,
-      html.theme-ready .bg-slate-100 {
+      html.theme-ready .bg-slate-100,
+      html.theme-ready .bg-blue-600 {
         transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
       }
 

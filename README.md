@@ -14,6 +14,8 @@ A factory QC tool (built for ITC Limited) for validating product barcodes and pr
 - **Validation history** — full audit log with thumbnails of scanned images; admin can clear all history
 - **Product database** — CRUD with batch format editor and auto-inference from label images
 - **CSV export** — admin can export the full validation log
+- **Mobile-first responsive UI** — bottom tab navigation, card layouts that replace wide tables on phones, a full-screen portrait camera, safe-area (notch / gesture-bar) handling, and dialogs that always stay reachable
+- **Light / Dark / System theme** — a three-option appearance picker (in the top-right ⋮ menu) with a premium "graphite navy" dark palette; follows the device theme when set to System, and remembers your choice
 
 ## Tech Stack
 
@@ -121,10 +123,10 @@ npm run dev
 
 # Or start separately:
 npm run dev:backend    # backend on port 3001
-npm run dev:frontend   # frontend on port 3000
+npm run dev:frontend   # frontend on port 3002
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The dev server proxies `/api` to the backend on port 3001.
+Open [http://localhost:3002](http://localhost:3002). The dev server proxies `/api` to the backend on port 3001.
 
 ## Default Credentials
 
@@ -185,6 +187,31 @@ The mode badge in the top-right corner of the Validator page shows which engine 
 - **Cloud OCR** (navy) — the cloud OCR service (Gemini) is reachable and being used
 - **Local OCR** (amber) — network unavailable; using PaddleOCR / Tesseract
 
+## Theme & Appearance
+
+The app supports three appearance modes, selectable from the **⋮ menu** in the top-right corner (next to the user avatar), which also houses **Sign out**:
+
+| Mode | Behavior |
+|---|---|
+| **Light** | Always light |
+| **Dark** | Always dark — a "graphite navy" palette (a black/gray blend, never pure black) |
+| **System** | Follows the device's OS theme and updates live when it changes |
+
+The choice is saved to `localStorage` and applied before first paint (no light-mode flash on reload). Implementation notes for contributors:
+
+- Dark mode is `class`-based (`<html class="dark">`), toggled by `frontend/context/ThemeContext.tsx`.
+- Rather than annotate every element, the dark palette is applied via a **global token remap** in `frontend/index.html`: the hardcoded `white` / `slate-*` (and their opacity variants used by the header/nav) are retargeted to dark surface/text tokens under `html.dark`. Brand navy elements (login panel, modal headers) are intentionally preserved.
+
+## Mobile Support
+
+The UI is designed mobile-first and is the primary deployment target:
+
+- **Bottom tab navigation** on phones (Validator / Database / History / Admin); the top header is reserved for branding and the ⋮ menu.
+- **Card layouts** replace wide data tables on small screens (Database, Admin log, History) — no horizontal scrolling, tap-friendly actions.
+- **Full-screen portrait camera** for capture, with the shutter clear of the gesture bar.
+- **Safe-area aware** — content and fixed bars respect the notch, rounded corners, and home-indicator (`env(safe-area-inset-*)`).
+- **Dialogs render in a portal** to `document.body` so full-screen modals are never clipped by an animated/transformed ancestor, and background scroll is locked while a dialog is open.
+
 ## API Endpoints
 
 | Method | Path | Description |
@@ -212,7 +239,7 @@ The mode badge in the top-right corner of the Validator page shows which engine 
 |---|---|
 | `npm run dev` | Start backend + frontend together |
 | `npm run dev:backend` | Backend only (port 3001) |
-| `npm run dev:frontend` | Frontend only (port 3000) |
+| `npm run dev:frontend` | Frontend only (port 3002) |
 | `npm run build` | Production frontend build |
 | `npm run start` | Production backend start |
 | `cd backend && npm run db:reset` | Reset the SQLite database |
