@@ -1,52 +1,41 @@
 const fs = require('fs');
 const path = require('path');
-const sqlite3 = require('sqlite3').verbose();
+const { createClient } = require('@libsql/client');
 
 const seedProducts = require('./seedProducts');
 
 const DATA_DIR = path.resolve(__dirname, 'data');
 const DB_PATH = path.join(DATA_DIR, 'app.db');
 
-if (!fs.existsSync(DATA_DIR)) {
+// Connection. libSQL speaks SQLite, so the same client serves both:
+//   • production  → Turso (set TURSO_DATABASE_URL + TURSO_AUTH_TOKEN). Render's
+//                   own disk is ephemeral, so prod MUST set these to persist.
+//   • local dev   → a plain SQLite file (no env needed).
+const TURSO_URL = process.env.TURSO_DATABASE_URL;
+if (!TURSO_URL && !fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
+const db = createClient(
+  TURSO_URL
+    ? { url: TURSO_URL, authToken: process.env.TURSO_AUTH_TOKEN }
+    : { url: `file:${DB_PATH.replace(/\\/g, '/')}` }
+);
 
-const db = new sqlite3.Database(DB_PATH);
-
-function run(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.run(sql, params, function onRun(err) {
-      if (err) {
-        reject(err);
-        return;
-      }
-      resolve({ lastID: this.lastID, changes: this.changes });
-    });
-  });
+// Thin wrappers preserving the original (sql, params) → {lastID,changes} / row /
+// rows shape, so the rest of this file is unchanged. libSQL is async-only.
+async function run(sql, params = []) {
+  const r = await db.execute({ sql, args: params });
+  return { lastID: r.lastInsertRowid, changes: Number(r.rowsAffected) };
 }
 
-function get(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.get(sql, params, (err, row) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-      resolve(row || null);
-    });
-  });
+async function get(sql, params = []) {
+  const r = await db.execute({ sql, args: params });
+  return r.rows[0] || null;
 }
 
-function all(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.all(sql, params, (err, rows) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-      resolve(rows || []);
-    });
-  });
+async function all(sql, params = []) {
+  const r = await db.execute({ sql, args: params });
+  return r.rows;
 }
 
 function mapRowToProduct(row) {
@@ -88,15 +77,10 @@ async function initializeDatabase() {
 
   const countResult = await get('SELECT COUNT(*) AS count FROM products');
   if (countResult && countResult.count === 0) {
-    await run('BEGIN');
-    try {
-      for (const product of seedProducts) {
-        await createProduct(product);
-      }
-      await run('COMMIT');
-    } catch (err) {
-      await run('ROLLBACK');
-      throw err;
+    // ponytail: sequential inserts, no explicit txn — seeding runs once on an
+    // empty DB, and libSQL remote doesn't share a txn across execute() calls.
+    for (const product of seedProducts) {
+      await createProduct(product);
     }
   }
 
@@ -131,18 +115,11 @@ async function initializeDatabase() {
 
   const userCount = await get('SELECT COUNT(*) AS count FROM users');
   if (userCount && userCount.count === 0) {
-    await run('BEGIN');
-    try {
-      for (const user of SEED_USERS) {
-        await run(
-          'INSERT INTO users (id, username, password, role, is_protected) VALUES (?, ?, ?, ?, ?)',
-          [user.id, user.username, user.password, user.role, user.isProtected ? 1 : 0]
-        );
-      }
-      await run('COMMIT');
-    } catch (err) {
-      await run('ROLLBACK');
-      throw err;
+    for (const user of SEED_USERS) {
+      await run(
+        'INSERT INTO users (id, username, password, role, is_protected) VALUES (?, ?, ?, ?, ?)',
+        [user.id, user.username, user.password, user.role, user.isProtected ? 1 : 0]
+      );
     }
   }
 
