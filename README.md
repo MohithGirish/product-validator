@@ -23,7 +23,7 @@ A factory QC tool (built for ITC Limited) for validating product barcodes and pr
 |---|---|
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS |
 | Backend | Node.js, Express |
-| Database | SQLite (`sqlite3`) |
+| Database | libSQL — [Turso](https://turso.tech) (cloud) in production; local SQLite file as fallback (`@libsql/client`) |
 | Primary OCR | Google Gemini API (`gemini-2.5-flash`) |
 | Fallback OCR | PaddleOCR (Python) → Tesseract.js |
 | Barcode decoding | ZXing (`@zxing/library`) |
@@ -35,7 +35,8 @@ A factory QC tool (built for ITC Limited) for validating product barcodes and pr
 factory-product-code-validator/
 ├── backend/
 │   ├── server.js               # Express API server (port 3001): auth, users, products, OCR
-│   ├── db.js                   # SQLite schema + CRUD for products and users
+│   ├── db.js                   # libSQL/Turso schema + CRUD for products and users
+│   ├── data/app.db             # Local SQLite fallback DB (used only when Turso is not configured)
 │   ├── geminiOcr.js            # Cloud (Gemini) OCR functions
 │   ├── localOcr.js             # PaddleOCR / Tesseract fallback
 │   ├── seedProducts.js         # Initial product seed data
@@ -91,9 +92,16 @@ Edit `.env.local`:
 ```env
 # Get a free key at https://aistudio.google.com/app/apikey
 GEMINI_API_KEY=your_key_here
+
+# Persistence (optional locally, REQUIRED in production — see Persistence below).
+# Leave blank for local dev to use the bundled SQLite file.
+TURSO_DATABASE_URL=
+TURSO_AUTH_TOKEN=
 ```
 
 If `GEMINI_API_KEY` is blank or the network is unreachable, the app automatically switches to local OCR — no extra config needed.
+
+If the `TURSO_*` vars are blank, the app stores data in a local SQLite file (`backend/data/app.db`) — fine for development.
 
 ### 3. (Optional) Set up PaddleOCR
 
@@ -128,9 +136,35 @@ npm run dev:frontend   # frontend on port 3002
 
 Open [http://localhost:3002](http://localhost:3002). The dev server proxies `/api` to the backend on port 3001.
 
+## Persistence & Deployment
+
+Products, users, and history live in a libSQL database. There are two backends, selected purely by environment variables:
+
+| Mode | When | Where data lives |
+|---|---|---|
+| **Turso (cloud)** | `TURSO_DATABASE_URL` is set | Turso — persists across restarts, redeploys, and machines |
+| **Local SQLite** | `TURSO_*` not set | `backend/data/app.db` — a file on the local disk |
+
+**Production must use Turso.** Hosts like Render have an *ephemeral* disk, so the local file is wiped on every deploy/restart. The local file is kept as a deliberate, **redundant fallback** (see the banner comment in `backend/db.js`): if Turso is ever unreachable, clear the `TURSO_*` vars and the app reverts to the local file with no code changes.
+
+### Set up Turso
+
+1. Create a free database at [app.turso.tech](https://app.turso.tech).
+2. Copy the database **URL** (`libsql://…`) and **create an auth token**.
+3. Set both as environment variables — locally in `.env.local`, and on your host (e.g. **Render → Environment**):
+
+   ```env
+   TURSO_DATABASE_URL=libsql://your-db-name.turso.io
+   TURSO_AUTH_TOKEN=eyJ...your-token...
+   ```
+
+   > Paste the **raw** values — no surrounding quotes and no `token` label prefix. A quoted token makes Turso reject every request with `HTTP 400`.
+
+On first boot against an empty database the app auto-creates the tables and seeds the default products and users; an already-populated database is left untouched.
+
 ## Default Credentials
 
-Seeded into the SQLite `users` table on first run:
+Seeded into the `users` table on first run (against an empty database):
 
 | Username | Password | Role | Notes |
 |---|---|---|---|
@@ -140,7 +174,7 @@ Seeded into the SQLite `users` table on first run:
 | `User3` | `User3@123` | Staff — own history only | |
 | `User4` | `User4@123` | Staff — own history only | |
 
-> These are starting credentials for setup. Change the staff passwords before real use (remove and re-create via the Admin → User Management screen). Passwords are stored in the local SQLite DB and are never sent back to the client.
+> These are starting credentials for setup. Change the staff passwords before real use (remove and re-create via the Admin → User Management screen). Passwords are stored in the database and are never sent back to the client.
 
 ## User Management & Account Rules
 
@@ -242,5 +276,5 @@ The UI is designed mobile-first and is the primary deployment target:
 | `npm run dev:frontend` | Frontend only (port 3002) |
 | `npm run build` | Production frontend build |
 | `npm run start` | Production backend start |
-| `cd backend && npm run db:reset` | Reset the SQLite database |
+| `cd backend && npm run db:reset` | Delete the **local** SQLite file (`backend/data/app.db`) so it's recreated + reseeded on next start. Does **not** affect a Turso database — reset that from the Turso dashboard. |
 | `cd backend && npm run ocr:paddle:check` | Verify PaddleOCR installation |

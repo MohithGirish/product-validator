@@ -1,3 +1,18 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// DATA LAYER — products + users.
+//
+// Primary store: Turso (cloud libSQL) when TURSO_DATABASE_URL is set. This is the
+// source of truth in production and persists across restarts/redeploys.
+//
+// REDUNDANT FALLBACK: the local SQLite file (backend/data/app.db) below.
+//   • Kept on purpose as a safety net — if Turso is ever down/unreachable or you
+//     want to run fully offline, unset TURSO_DATABASE_URL (+ TURSO_AUTH_TOKEN)
+//     and the app reverts to this local file with no code changes.
+//   • libSQL speaks SQLite, so the exact same queries serve both backends.
+//   • Note: the switch is by env var, not automatic — if TURSO_* is set but the
+//     server is failing, init errors out rather than silently using the file.
+//     To fail over, clear the Turso env vars and restart.
+// ─────────────────────────────────────────────────────────────────────────────
 const fs = require('fs');
 const path = require('path');
 const { createClient } = require('@libsql/client');
