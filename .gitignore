@@ -17,6 +17,11 @@ backend/data/*.db-*
 # Claude Code
 .claude/
 
+# Claude UI/UX improvement loop — working docs + Playwright captures
+.playwright-mcp/
+UI-UX-IMPROVEMENT-PROMPT.md
+UI-UX-BACKLOG.md
+
 # Graphify output
 graphify-out/
 
