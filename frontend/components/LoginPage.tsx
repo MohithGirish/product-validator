@@ -90,7 +90,7 @@ const LoginPage: React.FC = () => {
                   id="username"
                   name="username"
                   type="text"
-                  placeholder="e.g., admin"
+                  placeholder="e.g., Admin"
                   autoComplete="username"
                   required
                   value={username}
