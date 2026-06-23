@@ -148,6 +148,7 @@ const AdminPage: React.FC = () => {
             <div className="bg-white border border-slate-200/70 rounded-xl shadow-card overflow-hidden">
                 <div className="px-6 py-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
+                        <p className="eyebrow !text-blue-700 mb-1">Access Control</p>
                         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">User Management</h1>
                         <p className="mt-1 text-sm text-slate-500">Add or remove people who can sign in to the validator.</p>
                     </div>
@@ -215,6 +216,7 @@ const AdminPage: React.FC = () => {
             <div className="bg-white border border-slate-200/70 rounded-xl shadow-card px-6 py-5">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
+                        <p className="eyebrow !text-blue-700 mb-1">Audit Trail</p>
                         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Administrator Log</h1>
                         <p className="mt-1 text-sm text-slate-500">A complete audit trail of all validation activity across users.</p>
                     </div>
@@ -232,13 +234,13 @@ const AdminPage: React.FC = () => {
                         <div className="flex items-center gap-1.5">
                             <span className="h-2 w-2 rounded-full bg-emerald-500" />
                             <span className="text-slate-500">
-                                <span className="font-semibold text-slate-700">{history.filter(r => r.isValid).length}</span> valid
+                                <span className="font-semibold text-slate-700">{history.filter(r => r.isValid).length}</span> passed
                             </span>
                         </div>
                         <div className="flex items-center gap-1.5">
                             <span className="h-2 w-2 rounded-full bg-red-500" />
                             <span className="text-slate-500">
-                                <span className="font-semibold text-slate-700">{history.filter(r => !r.isValid).length}</span> invalid
+                                <span className="font-semibold text-slate-700">{history.filter(r => !r.isValid).length}</span> failed
                             </span>
                         </div>
                         <div className="flex items-center gap-1.5">
@@ -268,13 +270,13 @@ const AdminPage: React.FC = () => {
                         {history.map((record) => (
                             <div key={record.id} className={`bg-white rounded-xl border border-slate-200/70 shadow-card p-4 border-l-4 ${record.isValid ? 'border-l-emerald-500' : 'border-l-red-400'}`}>
                                 <div className="flex items-start justify-between gap-2">
-                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide ${
+                                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full font-mono text-[10px] font-bold uppercase tracking-widest ${
                                         record.isValid
                                           ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                           : 'bg-red-50 text-red-700 border border-red-200'
                                     }`}>
                                         <span className={`h-1.5 w-1.5 rounded-full ${record.isValid ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                                        {record.isValid ? 'Valid' : 'Invalid'}
+                                        {record.isValid ? 'Pass' : 'Fail'}
                                     </span>
                                     <span className="text-[11px] text-slate-400 text-right whitespace-nowrap">{new Date(record.timestamp).toLocaleString()}</span>
                                 </div>
@@ -283,27 +285,27 @@ const AdminPage: React.FC = () => {
                                 )}
                                 <dl className="mt-2.5 grid grid-cols-2 gap-x-4 gap-y-2">
                                     <div className="flex flex-col">
-                                        <dt className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">User</dt>
+                                        <dt className="eyebrow !text-slate-400">User</dt>
                                         <dd className="text-xs font-semibold text-slate-700 truncate">{usernameById(record.userId)}</dd>
                                     </div>
                                     <div className="flex flex-col">
-                                        <dt className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">MRP</dt>
+                                        <dt className="eyebrow !text-slate-400">MRP</dt>
                                         <dd className="text-xs font-mono text-slate-700">{record.extractedPrice || '—'}</dd>
                                     </div>
                                     <div className="flex flex-col">
-                                        <dt className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Batch</dt>
+                                        <dt className="eyebrow !text-slate-400">Batch</dt>
                                         <dd className="text-xs font-mono text-slate-700 break-all">{record.extractedBatch || '—'}</dd>
                                     </div>
                                     <div className="flex flex-col">
-                                        <dt className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Barcode</dt>
+                                        <dt className="eyebrow !text-slate-400">Barcode</dt>
                                         <dd className="text-xs font-mono text-slate-700 break-all">{record.extractedBarcode || '—'}</dd>
                                     </div>
                                     <div className="flex flex-col">
-                                        <dt className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Prod. Date</dt>
+                                        <dt className="eyebrow !text-slate-400">Prod. Date</dt>
                                         <dd className="text-xs font-mono text-slate-700">{record.extractedProductionDate || '—'}</dd>
                                     </div>
                                     <div className="flex flex-col">
-                                        <dt className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Exp. Date</dt>
+                                        <dt className="eyebrow !text-slate-400">Exp. Date</dt>
                                         <dd className="text-xs font-mono text-slate-700">{record.extractedExpiryDate || '—'}</dd>
                                     </div>
                                 </dl>
@@ -331,13 +333,13 @@ const AdminPage: React.FC = () => {
                                     {history.map((record) => (
                                         <tr key={record.id} className="bg-white hover:bg-slate-50 transition-colors">
                                             <td className="px-5 py-3.5">
-                                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide ${
+                                                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full font-mono text-[10px] font-bold uppercase tracking-widest ${
                                                     record.isValid
                                                       ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                                       : 'bg-red-50 text-red-700 border border-red-200'
                                                 }`}>
                                                     <span className={`h-1.5 w-1.5 rounded-full ${record.isValid ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                                                    {record.isValid ? 'Valid' : 'Invalid'}
+                                                    {record.isValid ? 'Pass' : 'Fail'}
                                                 </span>
                                             </td>
                                             <td className="px-5 py-3.5 font-semibold text-slate-900 whitespace-nowrap">{usernameById(record.userId)}</td>

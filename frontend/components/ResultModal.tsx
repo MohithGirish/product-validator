@@ -1,8 +1,6 @@
 
 import React from 'react';
-import { ValidationRecord } from '../types';
-import { CheckCircleIcon } from './icons/CheckCircleIcon';
-import { XCircleIcon } from './icons/XCircleIcon';
+import { ValidationRecord, ValidationCheck } from '../types';
 import { XIcon } from './icons/XIcon';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import Portal from './common/Portal';
@@ -13,26 +11,100 @@ interface ResultModalProps {
   result: Omit<ValidationRecord, 'id' | 'timestamp' | 'userId'> | null;
 }
 
+/** Does scanned glyph `ch` satisfy format slot `fmt` (# digit, @ letter, else literal)?
+ *  Mirrors buildFormatRegex — case-insensitive, like the regex's `i` flag. */
+const matchesSlot = (fmt: string, ch: string | undefined): boolean => {
+  if (ch === undefined) return false;
+  if (fmt === '#') return /[0-9]/.test(ch);
+  if (fmt === '@') return /[a-zA-Z]/.test(ch);
+  return fmt.toLowerCase() === ch.toLowerCase();
+};
+
+/** Printable cell: spaces hold width, missing chars show a faint dot. */
+const show = (ch: string | undefined): string =>
+  ch === undefined ? '·' : ch === ' ' ? ' ' : ch;
+
+/** The signature: a character-aligned comparison of the master #/@ format
+ *  against the scanned code, each glyph marked pass/fail. */
+const BatchDiff: React.FC<{ format: string; actual: string }> = ({ format, actual }) => {
+  const n = Math.max(format.length, actual.length);
+  const cells = Array.from({ length: n }, (_, i) => ({ f: format[i], a: actual[i] }));
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-baseline gap-3">
+        <span className="eyebrow !text-slate-400 w-[4.5rem] flex-shrink-0">Reference</span>
+        <div className="code-diff text-base">
+          {cells.map(({ f }, i) => (
+            <span key={i} className={`glyph ${f === '#' || f === '@' ? 'glyph-ph' : 'text-slate-700'}`}>{show(f)}</span>
+          ))}
+        </div>
+      </div>
+      <div className="flex items-baseline gap-3">
+        <span className="eyebrow !text-slate-400 w-[4.5rem] flex-shrink-0">Scanned</span>
+        <div className="code-diff text-base">
+          {cells.map(({ f, a }, i) => (
+            <span key={i} className={`glyph ${f !== undefined && matchesSlot(f, a) ? 'glyph-ok' : 'glyph-bad'}`}>{show(a)}</span>
+          ))}
+        </div>
+      </div>
+      <p className="text-[10px] text-slate-400 pl-[5.25rem] pt-0.5">
+        <span className="font-mono text-slate-500">#</span> any digit&nbsp;&nbsp;·&nbsp;&nbsp;
+        <span className="font-mono text-slate-500">@</span> any letter
+      </p>
+    </div>
+  );
+};
+
+const Verdict: React.FC<{ check: ValidationCheck }> = ({ check }) => {
+  const info = check.severity === 'info';
+  const cls = info
+    ? 'bg-slate-100 text-slate-500'
+    : check.passed
+      ? 'bg-emerald-50 text-emerald-700'
+      : 'bg-red-50 text-red-700';
+  return (
+    <span className={`text-[10px] font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${cls}`}>
+      {info ? 'Info' : check.passed ? 'Pass' : 'Fail'}
+    </span>
+  );
+};
+
+const CheckRow: React.FC<{ check: ValidationCheck }> = ({ check }) => {
+  const info = check.severity === 'info';
+  return (
+    <li className="border border-slate-100 rounded-lg p-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="eyebrow !text-slate-600">{check.label}</span>
+        <Verdict check={check} />
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-3 text-xs">
+        <div>
+          <p className="eyebrow !text-slate-400 mb-0.5">Expected</p>
+          <p className="font-mono text-slate-700 break-words">{check.expected || '—'}</p>
+        </div>
+        <div>
+          <p className="eyebrow !text-slate-400 mb-0.5">Found</p>
+          <p className={`font-mono break-words ${check.passed || info ? 'text-slate-700' : 'text-red-600 font-semibold'}`}>
+            {check.actual || '—'}
+          </p>
+        </div>
+      </div>
+    </li>
+  );
+};
+
 const ResultModal: React.FC<ResultModalProps> = ({ isOpen, onClose, result }) => {
   useBodyScrollLock(isOpen);
 
   if (!isOpen || !result) return null;
 
   const isValid = result.isValid;
-
-  // Prefer the rich per-check results (full-code verification) when available.
   const checks = result.checks ?? [];
-  const hasChecks = checks.length > 0;
-
-  const details: { label: string; value: string; matched: boolean }[] = [
-    { label: 'Product Name', value: result.productName || 'N/A', matched: Boolean(result.detailMatches?.productName) },
-    { label: 'Expected Batch Format', value: result.expectedBatchFormat || 'N/A', matched: Boolean(result.detailMatches?.expectedBatchFormat) },
-    { label: 'Batch Number', value: result.extractedBatch || 'N/A', matched: Boolean(result.detailMatches?.extractedBatch) },
-    { label: 'Barcode', value: result.extractedBarcode || 'N/A', matched: Boolean(result.detailMatches?.extractedBarcode) },
-    { label: 'Prod. Date', value: result.extractedProductionDate || 'N/A', matched: Boolean(result.detailMatches?.extractedProductionDate) },
-    { label: 'Expiry Date', value: result.extractedExpiryDate || 'N/A', matched: Boolean(result.detailMatches?.extractedExpiryDate) },
-    { label: 'Price (MRP)', value: result.extractedPrice || 'N/A', matched: Boolean(result.detailMatches?.extractedPrice) },
-  ];
+  const batchCheck = checks.find(c => c.key === 'batchCode');
+  const ledger = checks.filter(c => c.key !== 'batchCode'); // batch shown as the diff above
+  const showDiff = Boolean(batchCheck && result.expectedBatchFormat && result.extractedBatch);
+  const method = result.validationMethod === 'manual' ? 'Manual Entry' : 'OCR Scan';
+  const inspectedAt = new Date().toLocaleString();
 
   return (
     <Portal>
@@ -41,113 +113,72 @@ const ResultModal: React.FC<ResultModalProps> = ({ isOpen, onClose, result }) =>
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label={isValid ? 'Validation Successful' : 'Validation Failed'}
+      aria-label={isValid ? 'Inspection passed' : 'Inspection failed'}
     >
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md my-auto" onClick={(e) => e.stopPropagation()}>
         {/* Close */}
         <button
           onClick={onClose}
-          className="absolute top-3.5 right-3.5 h-7 w-7 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+          className="absolute top-3.5 right-3.5 h-7 w-7 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition z-10"
           aria-label="Close"
         >
           <XIcon className="h-4 w-4" />
         </button>
 
-        {/* Status banner */}
-        <div className={`px-6 pt-7 pb-5 text-center border-b ${isValid ? 'border-green-100' : 'border-red-100'}`}>
-          <div className={`h-14 w-14 rounded-full flex items-center justify-center mx-auto mb-3 ${isValid ? 'bg-green-50' : 'bg-red-50'}`}>
-            {isValid ? (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            )}
+        {/* ── Certificate header ─────────────────────────────── */}
+        <div className="px-6 pt-7 pb-5 border-b border-slate-100">
+          <p className="eyebrow !text-slate-400">Inspection Result</p>
+          <div className="mt-3 flex items-center gap-4">
+            <span className={`stamp flex-shrink-0 ${isValid ? 'stamp-pass' : 'stamp-fail'}`}>
+              {isValid ? 'Passed' : 'Failed'}
+            </span>
+            <div className="min-w-0">
+              {result.productName && (
+                <h2 className="text-base font-bold text-slate-900 leading-snug truncate">{result.productName}</h2>
+              )}
+              <p className="text-[11px] font-mono text-slate-500 mt-1">
+                {method} · <span className="capitalize">{result.marketType ?? '—'}</span> market
+              </p>
+              <p className="text-[11px] font-mono text-slate-400 mt-0.5">{inspectedAt}</p>
+            </div>
           </div>
-          <h2 className={`text-xl font-bold ${isValid ? 'text-green-800' : 'text-red-800'}`}>
-            {isValid ? 'Validation Passed' : 'Validation Failed'}
-          </h2>
-          <p className="mt-1 text-sm text-slate-500">
-            {isValid
-              ? 'All product details match the master database.'
-              : 'The product details could not be verified.'}
-          </p>
 
           {!isValid && result.failureReason && (
-            <div className="mt-3 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5 text-left">
-              <p className="text-xs font-bold text-red-700 mb-0.5">Reason</p>
+            <div className="mt-4 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5 text-left">
+              <p className="eyebrow !text-red-700 mb-0.5">Reason</p>
               <p className="text-sm text-red-700">{result.failureReason}</p>
             </div>
           )}
         </div>
 
-        {/* Details */}
-        <div className="px-6 py-4 max-h-[44vh] overflow-y-auto">
-          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">Validation Details</p>
+        {/* ── Body: code comparison + inspection ledger ──────── */}
+        <div className="px-6 py-4 max-h-[44vh] overflow-y-auto space-y-4">
+          {showDiff && (
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <p className="eyebrow !text-slate-400">Code Comparison</p>
+                {batchCheck && <Verdict check={batchCheck} />}
+              </div>
+              <div className="border border-slate-200 rounded-lg p-3 bg-slate-50/60">
+                <BatchDiff format={result.expectedBatchFormat!} actual={result.extractedBatch} />
+              </div>
+            </div>
+          )}
 
-          {hasChecks ? (
-            <ul className="space-y-2.5">
-              {checks.map(({ key, label, passed, expected, actual, severity }) => (
-                <li key={key} className="border border-slate-100 rounded-lg p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                      {severity === 'info' ? (
-                        <span className="h-4 w-4 flex-shrink-0 rounded-full bg-slate-300" aria-hidden="true" />
-                      ) : passed ? (
-                        <CheckCircleIcon className="h-4 w-4 flex-shrink-0 text-green-500" />
-                      ) : (
-                        <XCircleIcon className="h-4 w-4 flex-shrink-0 text-red-500" />
-                      )}
-                      {label}
-                    </span>
-                    {severity === 'info' ? (
-                      <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">
-                        Info
-                      </span>
-                    ) : (
-                      <span className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${passed ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                        {passed ? 'Pass' : 'Fail'}
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <p className="text-slate-400 font-medium mb-0.5">Expected</p>
-                      <p className="font-mono text-slate-700 break-words">{expected || '—'}</p>
-                    </div>
-                    <div>
-                      <p className="text-slate-400 font-medium mb-0.5">Found</p>
-                      <p className={`font-mono break-words ${passed || severity === 'info' ? 'text-slate-700' : 'text-red-600'}`}>{actual || '—'}</p>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <dl className="space-y-2">
-              {details.map(({ label, value, matched }) => (
-                <div key={label} className="flex justify-between items-start gap-3 py-1 border-b border-slate-50 last:border-0">
-                  <dt className="text-sm text-slate-500 font-medium flex-shrink-0">{label}</dt>
-                  <dd className="flex items-center gap-2 text-sm font-semibold text-slate-800 text-right font-mono truncate">
-                    {matched ? (
-                      <CheckCircleIcon className="h-4 w-4 flex-shrink-0 text-green-500" />
-                    ) : (
-                      <XCircleIcon className="h-4 w-4 flex-shrink-0 text-red-500" />
-                    )}
-                    <span className={matched ? 'text-slate-800' : 'text-slate-500'}>{value}</span>
-                  </dd>
-                </div>
-              ))}
-            </dl>
+          {ledger.length > 0 && (
+            <div>
+              <p className="eyebrow !text-slate-400 mb-2">Inspection Checks</p>
+              <ul className="space-y-2.5">
+                {ledger.map(c => <CheckRow key={c.key} check={c} />)}
+              </ul>
+            </div>
           )}
         </div>
 
-        <div className="px-6 pb-6">
+        <div className="px-6 pb-6 pt-2">
           <button
             onClick={onClose}
-            className="w-full bg-blue-600 text-white py-2.5 rounded-xl text-sm font-bold hover:bg-blue-700 transition"
+            className="press w-full bg-blue-600 text-white py-2.5 rounded-xl text-sm font-bold hover:bg-blue-700 transition"
           >
             Done
           </button>

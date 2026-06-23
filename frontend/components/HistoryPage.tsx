@@ -70,13 +70,13 @@ const ImageModal: React.FC<{ isOpen: boolean; onClose: () => void; imageUrl: str
 };
 
 const StatusBadge: React.FC<{ isValid: boolean }> = ({ isValid }) => (
-  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide border ${
+  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full font-mono text-[10px] font-bold uppercase tracking-widest border ${
     isValid
       ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
       : 'bg-red-50 text-red-700 border-red-200'
   }`}>
     <span className={`h-1.5 w-1.5 rounded-full ${isValid ? 'bg-emerald-500' : 'bg-red-500'}`} />
-    {isValid ? 'Valid' : 'Invalid'}
+    {isValid ? 'Pass' : 'Fail'}
   </span>
 );
 
@@ -144,7 +144,7 @@ const HistoryCard: React.FC<{ record: ValidationRecord; username?: string }> = (
                 record.extractedPrice           ? { label: 'Price',      value: record.extractedPrice }           : null,
               ].filter(Boolean).map(d => d && (
                 <div key={d.label} className="flex flex-col">
-                  <dt className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{d.label}</dt>
+                  <dt className="eyebrow !text-slate-400">{d.label}</dt>
                   <dd className="text-xs font-mono text-slate-700 truncate">{d.value || 'N/A'}</dd>
                 </div>
               ))}
@@ -192,6 +192,7 @@ const HistoryPage: React.FC = () => {
     <div className="max-w-7xl mx-auto space-y-6">
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm px-6 py-5 flex items-start justify-between gap-4">
         <div>
+          <p className="eyebrow !text-blue-700 mb-1">Validation Log</p>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
             {user?.role === 'admin' ? 'Global Validation History' : 'My Validation History'}
           </h1>

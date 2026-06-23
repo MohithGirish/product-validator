@@ -75,8 +75,9 @@ const LoginPage: React.FC = () => {
             <div className="mb-6 flex items-center gap-3">
               <img src="/itc-logo.png" alt="ITC Limited" className="h-10 w-auto object-contain" />
               <div className="h-8 w-px bg-slate-200" />
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Factory QC</span>
+              <span className="eyebrow !text-slate-400">Factory QC</span>
             </div>
+            <p className="eyebrow !text-blue-700 mb-1">Secure Access</p>
             <h2 className="text-2xl font-bold text-slate-900 mb-1">Sign in</h2>
             <p className="text-sm text-slate-500 mb-7">Welcome back — enter your credentials to continue.</p>
 

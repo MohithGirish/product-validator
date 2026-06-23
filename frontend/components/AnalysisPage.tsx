@@ -75,6 +75,7 @@ const AnalysisPage: React.FC = () => {
         <div className="max-w-4xl mx-auto space-y-6">
             {/* Header card */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-card px-6 py-5">
+                <p className="eyebrow !text-blue-700 mb-1">OCR Workbench</p>
                 <h1 className="text-2xl font-bold text-slate-900">Image Analysis</h1>
                 <p className="mt-1 text-sm text-slate-500">Upload a product label image to extract text and detected fields via OCR.</p>
             </div>

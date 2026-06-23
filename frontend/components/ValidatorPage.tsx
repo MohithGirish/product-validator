@@ -44,7 +44,7 @@ const StepIndicator: React.FC<{ step: 'barcode' | 'market_select' | 'batch' }> =
                                     </svg>
                                 ) : i + 1}
                             </div>
-                            <span className={`mt-2 text-[11px] font-semibold whitespace-nowrap tracking-wide ${isActive || isDone ? 'text-blue-700' : 'text-slate-400'}`}>
+                            <span className={`eyebrow mt-2 whitespace-nowrap ${isActive || isDone ? '!text-blue-700' : '!text-slate-400'}`}>
                                 {s.label}
                             </span>
                         </div>
@@ -145,7 +145,7 @@ const ImageUploader: React.FC<{
         {/* Camera divider */}
         <div className="flex items-center gap-3">
             <span className="flex-1 border-t border-slate-200" />
-            <span className="text-xs font-semibold text-slate-400">OR</span>
+            <span className="eyebrow !text-slate-400">OR</span>
             <span className="flex-1 border-t border-slate-200" />
         </div>
         <button
@@ -414,6 +414,7 @@ const ValidatorPage: React.FC = () => {
         {step === 'barcode' && (
             <div className="bg-white rounded-xl border border-slate-200/70 shadow-card overflow-hidden animate-slide-up">
               <div className="px-6 py-5 border-b border-slate-100 border-l-4 border-l-blue-600">
+                  <p className="eyebrow !text-blue-700 mb-1">Step 01 · Identify</p>
                   <h2 className="text-lg font-semibold text-slate-900 tracking-tight">Scan Barcode</h2>
                   <p className="text-sm text-slate-500 mt-0.5">Upload or capture the product barcode to identify it.</p>
               </div>
@@ -452,6 +453,7 @@ const ValidatorPage: React.FC = () => {
         {step === 'market_select' && (
             <div className="bg-white rounded-xl border border-slate-200/70 shadow-card overflow-hidden animate-slide-up">
                 <div className="px-6 py-5 border-b border-slate-100 border-l-4 border-l-blue-600">
+                    <p className="eyebrow !text-blue-700 mb-1">Step 01 · Select Market</p>
                     <h2 className="text-lg font-semibold text-slate-900 tracking-tight">Multiple Markets Found</h2>
                     <p className="text-sm text-slate-500 mt-0.5">The barcode matches products for more than one market. Select the correct one.</p>
                 </div>
@@ -476,6 +478,7 @@ const ValidatorPage: React.FC = () => {
         {step === 'batch' && foundProduct && (
             <div className="bg-white rounded-xl border border-slate-200/70 shadow-card overflow-hidden animate-slide-up">
                 <div className="px-6 py-5 border-b border-slate-100 border-l-4 border-l-blue-600">
+                    <p className="eyebrow !text-blue-700 mb-1">Step 02 · Verify</p>
                     <h2 className="text-lg font-semibold text-slate-900 tracking-tight">Validate Batch Code</h2>
                     <p className="text-sm text-slate-500 mt-0.5">
                         Product: <span className="font-semibold text-slate-700">{foundProduct.productName}</span>
@@ -487,20 +490,20 @@ const ValidatorPage: React.FC = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         {barcodeImageDataUrl && (
                             <div className="sm:col-span-1">
-                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Step 1 Image</p>
+                                <p className="eyebrow mb-2">Specimen · Step 1</p>
                                 <div className="bg-slate-50 border border-slate-200 rounded-lg p-2 flex items-center justify-center min-h-[80px]">
                                     <img src={barcodeImageDataUrl} alt="Scanned product barcode" className="max-h-24 object-contain rounded" />
                                 </div>
                             </div>
                         )}
                         <div className={barcodeImageDataUrl ? 'sm:col-span-2' : 'sm:col-span-3'}>
-                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Expected Batch Format</p>
+                            <p className="eyebrow mb-2">Reference · Master Record</p>
                             <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 min-h-[80px] flex flex-col justify-center">
                                 <pre className="whitespace-pre-wrap text-slate-800 text-sm font-mono leading-relaxed">
                                     {foundProduct.batchInfoText || 'No reference text available.'}
                                 </pre>
                                 <div className="mt-2 pt-2 border-t border-slate-200">
-                                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide mr-1">Format</span>
+                                    <span className="eyebrow mr-1">Format</span>
                                     <code className="font-mono text-sm bg-slate-100 text-slate-800 px-2 py-0.5 rounded">{foundProduct.batchNumberFormat}</code>
                                 </div>
                             </div>
@@ -510,7 +513,7 @@ const ValidatorPage: React.FC = () => {
                     {/* Upload */}
                     <form onSubmit={handleBatchSubmit} className="space-y-5">
                         <div>
-                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Batch Code Image</p>
+                            <p className="eyebrow mb-2">Specimen · Batch Code</p>
                             <ImageUploader
                                 id="batch-file-upload"
                                 imageUrl={imageUrl}

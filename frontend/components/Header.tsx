@@ -44,7 +44,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, setCurrentPage }) => {
                 <span className="h-5 w-px bg-slate-200" aria-hidden="true" />
                 <span className="text-sm font-bold text-slate-900 tracking-tight leading-none">
                   Product Validator
-                  <span className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mt-0.5">Factory QC</span>
+                  <span className="eyebrow block !text-slate-400 mt-0.5">Factory QC</span>
                 </span>
               </div>
             </div>

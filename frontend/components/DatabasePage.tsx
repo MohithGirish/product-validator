@@ -588,7 +588,7 @@ export const ProductFormModal: React.FC<{
                             />
                             {formData.batchInfoText && (
                                 <div className="mt-2">
-                                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Generalized pattern (what gets matched)</p>
+                                    <p className="eyebrow !text-slate-400 mb-1">Generalized pattern (what gets matched)</p>
                                     <pre className="whitespace-pre-wrap text-xs font-mono text-slate-600 bg-white border border-slate-200 rounded-lg p-2.5 leading-relaxed">{generalizedBatchInfoBlock(formData.batchInfoText)}</pre>
                                 </div>
                             )}
@@ -831,6 +831,7 @@ const DatabasePage: React.FC = () => {
             <div className="bg-white rounded-xl border border-slate-200/70 shadow-card px-6 py-5">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
+                        <p className="eyebrow !text-blue-700 mb-1">Master Records</p>
                         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Product Database</h1>
                         <p className="mt-1 text-sm text-slate-500">Manage all products in the master database.</p>
                     </div>
@@ -913,19 +914,19 @@ const DatabasePage: React.FC = () => {
                                 </div>
                                 <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5 text-sm">
                                     <div className="col-span-2 flex flex-col">
-                                        <dt className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Barcode</dt>
+                                        <dt className="eyebrow !text-slate-400">Barcode</dt>
                                         <dd className="mt-0.5"><span className="font-mono text-xs bg-slate-100 text-slate-800 px-2 py-0.5 rounded break-all">{p.barcode}</span></dd>
                                     </div>
                                     <div className="col-span-2 flex flex-col">
-                                        <dt className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Batch Format</dt>
+                                        <dt className="eyebrow !text-slate-400">Batch Format</dt>
                                         <dd className="mt-0.5"><span className="font-mono text-xs bg-slate-100 text-slate-800 px-2 py-0.5 rounded break-all">{p.batchNumberFormat}</span></dd>
                                     </div>
                                     <div className="flex flex-col">
-                                        <dt className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">MRP (₹)</dt>
+                                        <dt className="eyebrow !text-slate-400">MRP (₹)</dt>
                                         <dd className="mt-0.5 text-slate-700">{p.mrpApplicable && p.mrp ? `₹${p.mrp.toFixed(2)}` : <span className="text-slate-400">—</span>}</dd>
                                     </div>
                                     <div className="flex flex-col">
-                                        <dt className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Shelf Life</dt>
+                                        <dt className="eyebrow !text-slate-400">Shelf Life</dt>
                                         <dd className="mt-0.5 text-slate-700">{p.shelfLife && p.shelfLifeUnit ? `${p.shelfLife} ${p.shelfLifeUnit}` : <span className="text-slate-400">—</span>}</dd>
                                     </div>
                                 </dl>
