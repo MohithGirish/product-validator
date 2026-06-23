@@ -94,16 +94,30 @@ const ImageUploader: React.FC<{
     onClear: () => void;
     onCameraClick: () => void;
     fileInputRef: React.RefObject<HTMLInputElement>;
-}> = ({ id, imageUrl, imageFile, onFileChange, onClear, onCameraClick, fileInputRef }) => (
+    onDropFile: (file: File) => void;
+}> = ({ id, imageUrl, imageFile, onFileChange, onDropFile, onClear, onCameraClick, fileInputRef }) => {
+    const [isDragging, setIsDragging] = useState(false);
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+        const file = e.dataTransfer.files?.[0];
+        if (file && file.type.startsWith('image/')) onDropFile(file);
+    };
+    return (
     <div className="space-y-3">
-        {/* Drop zone */}
+        {/* Drop zone — click, or drag & drop (the dashed frame promises it, so honor it) */}
         <div
             className={`flex justify-center items-center px-6 py-10 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-200 group ${
-                imageUrl
+                isDragging
+                  ? 'border-blue-500 bg-blue-50/60 ring-4 ring-blue-100'
+                  : imageUrl
                   ? 'border-blue-400 bg-blue-50/40'
                   : 'border-slate-300 hover:border-blue-500 hover:bg-blue-50/40'
             }`}
             onClick={() => fileInputRef.current?.click()}
+            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={handleDrop}
             role="button"
             aria-label="Upload image"
         >
@@ -117,7 +131,7 @@ const ImageUploader: React.FC<{
                                 <UploadIcon />
                             </span>
                         </div>
-                        <p className="text-sm font-semibold text-slate-700">Click to upload an image</p>
+                        <p className="text-sm font-semibold text-slate-700">Click to upload <span className="font-normal text-slate-400">or drag &amp; drop</span></p>
                         <p className="text-xs text-slate-400 mt-1">PNG, JPG up to 4 MB</p>
                     </>
                 )}
@@ -157,7 +171,8 @@ const ImageUploader: React.FC<{
             Use Camera
         </button>
     </div>
-);
+    );
+};
 
 
 /* ── Main Validator Page ─────────────────────────────────── */
@@ -425,6 +440,7 @@ const ValidatorPage: React.FC = () => {
                         imageUrl={imageUrl}
                         imageFile={imageFile}
                         onFileChange={handleImageChange}
+                        onDropFile={processFile}
                         onClear={resetImageInput}
                         onCameraClick={() => setIsCameraOpen(true)}
                         fileInputRef={fileInputRef}
@@ -519,6 +535,7 @@ const ValidatorPage: React.FC = () => {
                                 imageUrl={imageUrl}
                                 imageFile={imageFile}
                                 onFileChange={handleImageChange}
+                                onDropFile={processFile}
                                 onClear={resetImageInput}
                                 onCameraClick={() => setIsCameraOpen(true)}
                                 fileInputRef={fileInputRef}
