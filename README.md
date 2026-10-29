@@ -24,7 +24,7 @@ A factory QC tool (built for ITC Limited) for validating product barcodes and pr
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS |
 | Backend | Node.js, Express |
 | Database | libSQL — [Turso](https://turso.tech) (cloud) in production; local SQLite file as fallback (`@libsql/client`) |
-| Primary OCR | Google Gemini API (`gemini-2.5-flash`) |
+| Primary OCR | Google Gemini API (`gemini-3.8-flash`) |
 | Fallback OCR | PaddleOCR (Python) → Tesseract.js |
 | Barcode decoding | ZXing (`@zxing/library`) |
 | Image processing | Sharp |
