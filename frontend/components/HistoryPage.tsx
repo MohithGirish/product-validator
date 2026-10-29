@@ -1,6 +1,7 @@
-// Validation history: staff see their own records, admins see everyone's with
-// the user's name. Shows image thumbnails with a full-size viewer, and admins
-// can clear all history.
+// Validation history (stored on the server): staff see their own records,
+// admins see everyone's with the user's name. Shows image thumbnails; tapping
+// one opens the viewer and loads the full-size photo. Admins can clear all
+// history.
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
@@ -85,6 +86,14 @@ const StatusBadge: React.FC<{ isValid: boolean }> = ({ isValid }) => (
 
 const HistoryCard: React.FC<{ record: ValidationRecord; username?: string }> = ({ record, username }) => {
   const [imageModalUrl, setImageModalUrl] = useState<string | null>(null);
+
+  // Show the thumbnail at once, then swap in the full-size photo from the server.
+  const openImage = (which: 'barcode' | 'batch', thumbnail: string) => {
+    setImageModalUrl(thumbnail);
+    databaseService.getHistoryImage(record.id, which)
+      .then(full => { if (full) setImageModalUrl(current => (current === thumbnail ? full : current)); })
+      .catch(err => console.warn('Could not load the full-size image:', err));
+  };
   const hasImages = record.validationMethod === 'ocr' && (record.barcodeImageUrl || record.batchImageUrl);
 
   return (
@@ -100,7 +109,7 @@ const HistoryCard: React.FC<{ record: ValidationRecord; username?: string }> = (
             <>
               {record.barcodeImageUrl && (
                 <button
-                  onClick={() => setImageModalUrl(record.barcodeImageUrl!)}
+                  onClick={() => openImage('barcode', record.barcodeImageUrl!)}
                   className="relative flex-1 overflow-hidden group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                   aria-label="View barcode image"
                 >
@@ -111,7 +120,7 @@ const HistoryCard: React.FC<{ record: ValidationRecord; username?: string }> = (
               )}
               {record.batchImageUrl && (
                 <button
-                  onClick={() => setImageModalUrl(record.batchImageUrl!)}
+                  onClick={() => openImage('batch', record.batchImageUrl!)}
                   className="relative flex-1 overflow-hidden group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                   aria-label="View batch code image"
                 >
@@ -179,9 +188,13 @@ const HistoryPage: React.FC = () => {
   }, [user]);
 
   const handleClearHistory = async () => {
-    await clearHistory();
     setShowClearConfirm(false);
-    showToast('Validation history cleared', 'success');
+    try {
+      await clearHistory();
+      showToast('Validation history cleared', 'success');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to clear history.', 'error');
+    }
   };
 
   return (

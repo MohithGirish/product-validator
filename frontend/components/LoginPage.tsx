@@ -1,5 +1,6 @@
 // Sign-in screen. Sends the username and password through AuthContext.login
-// (checked by the backend) and shows an error if sign-in fails.
+// (checked by the backend, which starts a session that survives page reloads)
+// and shows an error if the credentials are wrong or the server can't be reached.
 
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
@@ -17,12 +18,13 @@ const LoginPage: React.FC = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    const success = await login(username, password);
-    setIsLoading(false);
-    if (success) {
-      setError('');
-    } else {
-      setError('Invalid username or password.');
+    try {
+      const success = await login(username, password);
+      setError(success ? '' : 'Invalid username or password.');
+    } catch {
+      setError("Can't reach the server. Check your connection and try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 

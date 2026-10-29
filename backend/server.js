@@ -3,8 +3,11 @@
 // Each OCR request goes to Gemini first and falls back to local OCR only when
 // Gemini is unreachable (network error or timeout); any other Gemini error is
 // returned to the caller. OCR routes are rate-limited to 20 requests/minute per
-// IP and accept images up to 4 MB. In production it also serves the built
-// frontend from ../frontend/dist.
+// IP and accept images up to 4 MB. Also stores validation history.
+// Every /api route except login and health needs a session token
+// (Authorization: Bearer <token>, from /api/auth/login); user management,
+// product changes and clearing history are admin-only. In production it also
+// serves the built frontend from ../frontend/dist.
 
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') });
@@ -32,6 +35,13 @@ const {
   findUserByCredentials,
   createUser,
   deleteUser,
+  createSession,
+  findUserBySession,
+  deleteSession,
+  addHistoryRecord,
+  getHistory,
+  getHistoryImage,
+  clearHistory,
 } = require('./db');
 const geminiOcr = require('./geminiOcr');
 const localOcr = require('./localOcr');
@@ -44,7 +54,13 @@ const PORT = process.env.PORT || 3001;
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' ? false : true,
 }));
-app.use(express.json());
+// Default 100 KB JSON limit everywhere except POST /api/history, which carries
+// two downscaled photos and parses its own body (8 MB) after the session check.
+const parseJson = express.json();
+const parseHistoryJson = express.json({ limit: '8mb' });
+app.use((req, res, next) => (
+  req.method === 'POST' && req.path === '/api/history' ? next() : parseJson(req, res, next)
+));
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 4 * 1024 * 1024 } });
 
@@ -67,6 +83,33 @@ function ocrRateLimit(req, res, next) {
   entry.count++;
   next();
 }
+
+// ── Sessions ───────────────────────────────────────────────────────────────
+
+function bearerToken(req) {
+  const match = /^Bearer (.+)$/.exec(req.get('Authorization') || '');
+  return match ? match[1] : null;
+}
+
+// Attaches the signed-in user as req.user, or answers 401.
+async function requireAuth(req, res, next) {
+  try {
+    const user = await findUserBySession(bearerToken(req));
+    if (!user) return res.status(401).json({ error: 'Please sign in again.' });
+    req.user = user;
+    next();
+  } catch (err) {
+    console.error('auth error:', err.message);
+    res.status(500).json({ error: 'Could not check your sign-in.' });
+  }
+}
+
+function requireAdmin(req, res, next) {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Only administrators can do this.' });
+  next();
+}
+
+const adminOnly = [requireAuth, requireAdmin];
 
 // ── OCR routing: Gemini first, local fallback ──────────────────────────────
 
@@ -108,18 +151,28 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid username or password.' });
     }
     // findUserByCredentials never returns the password field.
-    res.json(user);
+    res.json({ user, token: await createSession(user.id) });
   } catch (err) {
     console.error('login error:', err.message);
     res.status(500).json({ error: 'Login failed. Please try again.' });
   }
 });
 
-// ── User management (admin) ─────────────────────────────────────────────────
-// Note: this app has no session tokens; the frontend only exposes these screens
-// to admins. The endpoints are intentionally simple for the factory-LAN context.
+app.get('/api/auth/me', requireAuth, (req, res) => res.json(req.user));
 
-app.get('/api/users', async (_req, res) => {
+app.post('/api/auth/logout', requireAuth, async (req, res) => {
+  try {
+    await deleteSession(bearerToken(req));
+    res.status(204).send();
+  } catch (err) {
+    console.error('logout error:', err.message);
+    res.status(500).json({ error: 'Sign-out failed.' });
+  }
+});
+
+// ── User management (admin) ─────────────────────────────────────────────────
+
+app.get('/api/users', adminOnly, async (_req, res) => {
   try {
     res.json(await getUsers());
   } catch (err) {
@@ -128,7 +181,7 @@ app.get('/api/users', async (_req, res) => {
   }
 });
 
-app.post('/api/users', async (req, res) => {
+app.post('/api/users', adminOnly, async (req, res) => {
   try {
     const created = await createUser(req.body || {});
     res.status(201).json(created);
@@ -139,7 +192,7 @@ app.post('/api/users', async (req, res) => {
   }
 });
 
-app.delete('/api/users/:id', async (req, res) => {
+app.delete('/api/users/:id', adminOnly, async (req, res) => {
   try {
     const result = await deleteUser(req.params.id);
     if (!result.ok) {
@@ -158,7 +211,7 @@ app.delete('/api/users/:id', async (req, res) => {
 
 // ── Product endpoints ──────────────────────────────────────────────────────
 
-app.get('/api/products', async (_req, res) => {
+app.get('/api/products', requireAuth, async (_req, res) => {
   try {
     res.json(await getProducts());
   } catch (err) {
@@ -167,7 +220,7 @@ app.get('/api/products', async (_req, res) => {
   }
 });
 
-app.get('/api/products/barcode/:barcode', async (req, res) => {
+app.get('/api/products/barcode/:barcode', requireAuth, async (req, res) => {
   try {
     res.json(await getProductsByBarcode(req.params.barcode));
   } catch (err) {
@@ -176,7 +229,7 @@ app.get('/api/products/barcode/:barcode', async (req, res) => {
   }
 });
 
-app.post('/api/products', async (req, res) => {
+app.post('/api/products', adminOnly, async (req, res) => {
   try {
     const created = await createProduct(req.body || {});
     res.status(201).json(created);
@@ -187,7 +240,7 @@ app.post('/api/products', async (req, res) => {
   }
 });
 
-app.put('/api/products/:id', async (req, res) => {
+app.put('/api/products/:id', adminOnly, async (req, res) => {
   try {
     const updated = await updateProduct(req.params.id, req.body || {});
     if (!updated) return res.status(404).json({ error: 'Product not found.' });
@@ -199,7 +252,7 @@ app.put('/api/products/:id', async (req, res) => {
   }
 });
 
-app.delete('/api/products/:id', async (req, res) => {
+app.delete('/api/products/:id', adminOnly, async (req, res) => {
   try {
     const deleted = await deleteProduct(req.params.id);
     if (!deleted) return res.status(404).json({ error: 'Product not found.' });
@@ -210,13 +263,65 @@ app.delete('/api/products/:id', async (req, res) => {
   }
 });
 
+// ── Validation history ─────────────────────────────────────────────────────
+// Staff see and open only their own records; admins see everyone's.
+
+app.get('/api/history', requireAuth, async (req, res) => {
+  try {
+    res.json(await getHistory(req.user.role === 'admin' ? null : req.user.id));
+  } catch (err) {
+    console.error('get-history error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch history.' });
+  }
+});
+
+app.get('/api/history/:id/images/:which', requireAuth, async (req, res) => {
+  try {
+    const owner = req.user.role === 'admin' ? null : req.user.id;
+    const dataUrl = await getHistoryImage(req.params.id, req.params.which, owner);
+    if (!dataUrl) return res.status(404).json({ error: 'Image not found.' });
+    res.json({ dataUrl });
+  } catch (err) {
+    console.error('get-history-image error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch image.' });
+  }
+});
+
+app.post('/api/history', requireAuth, parseHistoryJson, async (req, res) => {
+  const body = req.body || {};
+  // A record always belongs to the signed-in user. The one exception: an admin
+  // uploading a device's old on-device history keeps each record's author.
+  const owner = req.user.role === 'admin' && typeof body.userId === 'string' && body.userId
+    ? body.userId
+    : req.user.id;
+  try {
+    const saved = await addHistoryRecord(owner, body);
+    if (!saved) return res.status(409).json({ error: 'A different record already uses this id.' });
+    res.status(201).json(saved);
+  } catch (err) {
+    console.error('add-history error:', err.message);
+    const status = /valid id/.test(err.message) ? 400 : 500;
+    res.status(status).json({ error: status === 400 ? err.message : 'Failed to save history.' });
+  }
+});
+
+app.delete('/api/history', adminOnly, async (_req, res) => {
+  try {
+    await clearHistory();
+    res.status(204).send();
+  } catch (err) {
+    console.error('clear-history error:', err.message);
+    res.status(500).json({ error: 'Failed to clear history.' });
+  }
+});
+
 app.get('/api/health', (_req, res) =>
   res.json({ ok: true, gemini: geminiOcr.isAvailable() ? 'configured' : 'not configured' })
 );
 
 // ── OCR endpoints ──────────────────────────────────────────────────────────
 
-app.post('/api/extract-product', ocrRateLimit, upload.single('image'), async (req, res) => {
+app.post('/api/extract-product', requireAuth, ocrRateLimit, upload.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No image file provided.' });
   try {
     const { result, engine } = await withGeminiFallback(
@@ -231,7 +336,7 @@ app.post('/api/extract-product', ocrRateLimit, upload.single('image'), async (re
   }
 });
 
-app.post('/api/extract-batch', ocrRateLimit, upload.single('image'), async (req, res) => {
+app.post('/api/extract-batch', requireAuth, ocrRateLimit, upload.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No image file provided.' });
   const batchFormat = req.body.batchFormat || '';
   try {
@@ -254,7 +359,7 @@ app.post('/api/extract-batch', ocrRateLimit, upload.single('image'), async (req,
   }
 });
 
-app.post('/api/extract-batch-format', ocrRateLimit, upload.single('image'), async (req, res) => {
+app.post('/api/extract-batch-format', requireAuth, ocrRateLimit, upload.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No image file provided.' });
   try {
     const { result, engine } = await withGeminiFallback(
@@ -276,7 +381,7 @@ app.post('/api/extract-batch-format', ocrRateLimit, upload.single('image'), asyn
   }
 });
 
-app.post('/api/analyze-image', ocrRateLimit, upload.single('image'), async (req, res) => {
+app.post('/api/analyze-image', requireAuth, ocrRateLimit, upload.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No image file provided.' });
   const prompt = req.body.prompt || '';
   try {

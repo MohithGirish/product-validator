@@ -1,5 +1,5 @@
 // Inline SVG icon: document scanner. Size and color come from the className prop.
-// Used in DatabasePage.
+// Used in DatabasePage, Header.
 
 import React from 'react';
 

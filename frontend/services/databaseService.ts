@@ -1,31 +1,21 @@
-// Data access for the frontend.
-// - Users: always through the backend API (/api/users, /api/auth/login).
-// - Products: through the backend (/api/products); if a request fails, falls
-//   back to this browser's localStorage.
-// - Validation history: stored ONLY in this browser's localStorage (db_history).
-//   It is not sent to the backend, so it isn't shared between devices.
-// The Google Sheets mode below is switched off (GOOGLE_APPS_SCRIPT_URL is empty).
-
+// Data access for the frontend. Every call goes to the backend API with the
+// session token (see apiClient.ts).
+// - Users and sign-in: /api/auth/*, /api/users (user management is admin-only).
+// - Products: /api/products. If the backend can't be reached at all, falls back
+//   to a copy in this browser's localStorage; an error answer from the server
+//   (e.g. 403 for staff) is shown instead.
+// - Validation history: /api/history, stored on the server so every device sees
+//   the same records. Records saved on a device by older versions of the app,
+//   or while the backend was unreachable, wait in localStorage 'db_history'
+//   until AuthContext uploads them.
 import { ProductData, User, ValidationRecord } from '../types';
-import { MOCK_USERS, MASTER_PRODUCT_DATABASE } from '../constants';
+import { MASTER_PRODUCT_DATABASE } from '../constants';
+import { ApiError, apiJson, setToken } from './apiClient';
 
-// ==============================================================================
-// CONFIGURATION
-// ==============================================================================
-// INSTRUCTIONS:
-// 1. Create a Google Sheet with tabs: 'db_users', 'db_products', 'db_history'.
-// 2. Add header rows to each matching the Type interfaces.
-// 3. Create a Google Apps Script (Extensions > Apps Script) to handle doGet/doPost.
-// 4. Deploy as Web App (Access: Anyone).
-// 5. Paste the Web App URL below.
-//
-// If this string is empty, the app will fallback to LocalStorage (Offline Mode).
-const GOOGLE_APPS_SCRIPT_URL = ""; 
 const PRODUCTS_API_BASE = '/api/products';
-// ==============================================================================
+const LOCAL_HISTORY_KEY = 'db_history';
 
-
-// --- Private Helper Functions (LocalStorage Fallback) ---
+// --- localStorage helpers (offline product copy, old on-device history) ---
 
 const _readTableLocal = <T>(key: string): T[] => {
     try {
@@ -37,251 +27,205 @@ const _readTableLocal = <T>(key: string): T[] => {
     }
 };
 
-const _writeTableLocal = <T>(key:string, data: T[]): void => {
+const _writeTableLocal = <T>(key: string, data: T[]): boolean => {
     try {
         window.localStorage.setItem(key, JSON.stringify(data));
+        return true;
     } catch (error) {
         console.error(`Failed to write table "${key}" to localStorage`, error);
-    }
-};
-
-// --- Google Sheets API Helper ---
-
-const _fetchFromSheet = async <T>(table: string): Promise<T[]> => {
-    if (!GOOGLE_APPS_SCRIPT_URL) return [];
-    try {
-        const response = await fetch(`${GOOGLE_APPS_SCRIPT_URL}?action=get_data&table=${table}`);
-        const data = await response.json();
-        return data as T[];
-    } catch (e) {
-        console.error(`Error fetching ${table} from Sheets:`, e);
-        return [];
-    }
-};
-
-const _postToSheet = async (table: string, action: 'add' | 'update' | 'delete', payload: any): Promise<boolean> => {
-    if (!GOOGLE_APPS_SCRIPT_URL) return false;
-    
-    // Google Apps Script requires a specific POST format to avoid CORS preflight issues in some browsers,
-    // often treated as text/plain to bypass strict CORS checks if the script isn't set up perfectly.
-    // However, the standard fetch with correct CORS setup on GAS side works best.
-    try {
-        await fetch(GOOGLE_APPS_SCRIPT_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action, table, payload: action === 'delete' ? undefined : payload, id: action === 'delete' ? payload : undefined })
-        });
-        return true;
-    } catch (e) {
-        console.error(`Error performing ${action} on ${table}:`, e);
         return false;
     }
 };
 
-const _fetchFromBackend = async <T>(url: string, options?: RequestInit): Promise<T> => {
-    const response = await fetch(url, {
-        headers: {
-            'Content-Type': 'application/json',
-            ...(options?.headers || {})
-        },
-        ...options
-    });
+// Only a failed connection falls back to the local copy; an answer from the
+// server (403, 400, 500…) is a real result and is passed on to the caller.
+const _isOffline = (error: unknown): boolean => !(error instanceof ApiError);
 
-    if (!response.ok) {
-        const errorBody = await response.json().catch(() => ({ error: response.statusText }));
-        throw new Error(errorBody.error || `Backend error: ${response.status}`);
-    }
-
-    if (response.status === 204) {
-        return undefined as T;
-    }
-
-    return response.json();
-};
-
-
-// --- Database Initialization ---
-
-const initializeDatabase = async () => {
-    if (GOOGLE_APPS_SCRIPT_URL) {
-        console.log("Connected to Google Sheets Database.");
-        return; // Skip local seeding if using cloud DB
-    }
-
-    // --- Users Table Initialization (Merge logic) ---
-    const localUsers = _readTableLocal<User>('db_users');
-    const userMap = new Map(localUsers.map(u => [u.id, u]));
-    MOCK_USERS.forEach(user => userMap.set(user.id, user)); 
-    _writeTableLocal('db_users', Array.from(userMap.values()));
-
-    // --- Products Table Initialization (Merge logic) ---
+// Seed the offline product copy without overwriting local records, and drop the
+// old local user table (it held plain-text demo passwords and is no longer used).
+const initializeLocalStorage = () => {
     const localProducts = _readTableLocal<ProductData>('db_products');
     const productMap = new Map(localProducts.map(p => [p.id, p]));
     MASTER_PRODUCT_DATABASE.forEach(product => {
-        if (!productMap.has(product.id)) {
-            productMap.set(product.id, product);
-        }
+        if (!productMap.has(product.id)) productMap.set(product.id, product);
     });
     _writeTableLocal('db_products', Array.from(productMap.values()));
-
-    // --- History Table Initialization ---
-    if (!localStorage.getItem('db_history')) {
-        _writeTableLocal('db_history', []);
+    try {
+        window.localStorage.removeItem('db_users');
+    } catch {
+        // Storage blocked: nothing to clean up.
     }
 };
 
-// Initialize on load
-initializeDatabase();
+initializeLocalStorage();
 
-
-// --- Public API for Database Service ---
+/** Holds the full-size photos sent alongside a history record; the record itself holds thumbnails. */
+export interface HistoryFullImages {
+    barcode?: string | null;
+    batch?: string | null;
+}
 
 export const databaseService = {
-    // --- Users (backend-managed) ---
+    // --- Sign-in ---
+    /** Signs in, stores the session token and returns the user, or null for wrong credentials. */
+    login: async (username: string, password: string): Promise<User | null> => {
+        setToken(null);
+        try {
+            const { user, token } = await apiJson<{ user: User; token: string }>(
+                '/api/auth/login', 'POST', { username, password });
+            setToken(token);
+            return user;
+        } catch (error) {
+            if (error instanceof ApiError && error.status === 401) return null;
+            throw error;
+        }
+    },
+
+    /** Returns the user for the stored token, or null when there is none or it expired. */
+    getCurrentUser: async (): Promise<User | null> => {
+        try {
+            return await apiJson<User>('/api/auth/me');
+        } catch (error) {
+            if (error instanceof ApiError && error.status === 401) {
+                setToken(null);
+                return null;
+            }
+            throw error;
+        }
+    },
+
+    logout: async (): Promise<void> => {
+        try {
+            await apiJson<void>('/api/auth/logout', 'POST');
+        } catch (error) {
+            console.warn('Sign-out request failed; clearing the local session anyway.', error);
+        } finally {
+            setToken(null);
+        }
+    },
+
+    // --- Users (admin) ---
     getUsers: async (): Promise<User[]> => {
         try {
-            return await _fetchFromBackend<User[]>('/api/users');
+            return await apiJson<User[]>('/api/users');
         } catch (error) {
             console.warn('Failed to fetch users from backend:', error);
             return [];
         }
     },
 
-    findUserByUsernameAndPassword: async (username: string, password: string): Promise<User | null> => {
-        try {
-            return await _fetchFromBackend<User>('/api/auth/login', {
-                method: 'POST',
-                body: JSON.stringify({ username, password }),
-            });
-        } catch {
-            // 401 (wrong credentials) or backend unreachable — both surface as "login failed".
-            return null;
-        }
-    },
-
     addUser: async (newUser: { username: string; password: string; role: 'admin' | 'staff' }): Promise<User> => {
-        return await _fetchFromBackend<User>('/api/users', {
-            method: 'POST',
-            body: JSON.stringify(newUser),
-        });
+        return await apiJson<User>('/api/users', 'POST', newUser);
     },
 
     deleteUser: async (userId: string): Promise<void> => {
-        await _fetchFromBackend<void>(`/api/users/${encodeURIComponent(userId)}`, { method: 'DELETE' });
+        await apiJson<void>(`/api/users/${encodeURIComponent(userId)}`, 'DELETE');
     },
 
-    // --- Product Table ---
+    // --- Products ---
     getProducts: async (): Promise<ProductData[]> => {
         try {
-            return await _fetchFromBackend<ProductData[]>(PRODUCTS_API_BASE);
+            return await apiJson<ProductData[]>(PRODUCTS_API_BASE);
         } catch (error) {
-            console.warn('Falling back to local product storage:', error);
-            if (GOOGLE_APPS_SCRIPT_URL) {
-                return await _fetchFromSheet<ProductData>('db_products');
-            }
-            return Promise.resolve(_readTableLocal<ProductData>('db_products'));
+            if (!_isOffline(error)) throw error;
+            console.warn('Backend unreachable; using the local product copy:', error);
+            return _readTableLocal<ProductData>('db_products');
         }
     },
-    
+
     findProductsByBarcode: async (barcode: string): Promise<ProductData[]> => {
         try {
-            return await _fetchFromBackend<ProductData[]>(`${PRODUCTS_API_BASE}/barcode/${encodeURIComponent(barcode)}`);
+            return await apiJson<ProductData[]>(`${PRODUCTS_API_BASE}/barcode/${encodeURIComponent(barcode)}`);
         } catch (error) {
-            console.warn('Falling back to local product search:', error);
-            let products: ProductData[] = [];
-            if (GOOGLE_APPS_SCRIPT_URL) {
-                products = await _fetchFromSheet<ProductData>('db_products');
-            } else {
-                products = _readTableLocal<ProductData>('db_products');
-            }
-            return products.filter(p => p.barcode === barcode) || [];
+            if (!_isOffline(error)) throw error;
+            console.warn('Backend unreachable; searching the local product copy:', error);
+            return _readTableLocal<ProductData>('db_products').filter(p => p.barcode === barcode);
         }
     },
 
     addProduct: async (newProduct: ProductData): Promise<ProductData> => {
         try {
-            return await _fetchFromBackend<ProductData>(PRODUCTS_API_BASE, {
-                method: 'POST',
-                body: JSON.stringify(newProduct)
-            });
+            return await apiJson<ProductData>(PRODUCTS_API_BASE, 'POST', newProduct);
         } catch (error) {
-            console.warn('Falling back to local product add:', error);
-            if (GOOGLE_APPS_SCRIPT_URL) {
-                await _postToSheet('db_products', 'add', newProduct);
-                return newProduct;
-            }
-            const products = _readTableLocal<ProductData>('db_products');
-            const updatedProducts = [newProduct, ...products];
-            _writeTableLocal('db_products', updatedProducts);
+            if (!_isOffline(error)) throw error;
+            console.warn('Backend unreachable; saving the product locally:', error);
+            _writeTableLocal('db_products', [newProduct, ..._readTableLocal<ProductData>('db_products')]);
             return newProduct;
         }
     },
 
     updateProduct: async (updatedProduct: ProductData): Promise<ProductData> => {
         try {
-            return await _fetchFromBackend<ProductData>(`${PRODUCTS_API_BASE}/${encodeURIComponent(updatedProduct.id)}`, {
-                method: 'PUT',
-                body: JSON.stringify(updatedProduct)
-            });
+            return await apiJson<ProductData>(
+                `${PRODUCTS_API_BASE}/${encodeURIComponent(updatedProduct.id)}`, 'PUT', updatedProduct);
         } catch (error) {
-            console.warn('Falling back to local product update:', error);
-            if (GOOGLE_APPS_SCRIPT_URL) {
-                await _postToSheet('db_products', 'update', updatedProduct);
-                return updatedProduct;
-            }
-            let products = _readTableLocal<ProductData>('db_products');
-            products = products.map(p => p.id === updatedProduct.id ? updatedProduct : p);
-            _writeTableLocal('db_products', products);
+            if (!_isOffline(error)) throw error;
+            console.warn('Backend unreachable; updating the product locally:', error);
+            const products = _readTableLocal<ProductData>('db_products');
+            _writeTableLocal('db_products', products.map(p => p.id === updatedProduct.id ? updatedProduct : p));
             return updatedProduct;
         }
     },
 
     deleteProduct: async (productId: string): Promise<void> => {
         try {
-            await _fetchFromBackend<void>(`${PRODUCTS_API_BASE}/${encodeURIComponent(productId)}`, {
-                method: 'DELETE'
-            });
-            return;
+            await apiJson<void>(`${PRODUCTS_API_BASE}/${encodeURIComponent(productId)}`, 'DELETE');
         } catch (error) {
-            console.warn('Falling back to local product delete:', error);
-            if (GOOGLE_APPS_SCRIPT_URL) {
-                await _postToSheet('db_products', 'delete', productId);
-                return;
-            }
-            let products = _readTableLocal<ProductData>('db_products');
-            products = products.filter(p => p.id !== productId);
-            _writeTableLocal('db_products', products);
+            if (!_isOffline(error)) throw error;
+            console.warn('Backend unreachable; deleting the product locally:', error);
+            _writeTableLocal('db_products', _readTableLocal<ProductData>('db_products').filter(p => p.id !== productId));
         }
     },
 
-    // --- History Table ---
+    // --- History ---
+    /** Returns history newest first: the caller's own records for staff, everyone's for admins. */
     getHistory: async (): Promise<ValidationRecord[]> => {
-        if (GOOGLE_APPS_SCRIPT_URL) {
-            const records = await _fetchFromSheet<ValidationRecord>('db_history');
-            // Sheets might return boolean as string "TRUE" or "FALSE", ensure type safety if needed
-            // Also timestamps might come as strings.
-            return records.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-        }
-        return Promise.resolve(_readTableLocal<ValidationRecord>('db_history'));
+        return await apiJson<ValidationRecord[]>('/api/history');
     },
 
-    addHistoryRecord: async (record: ValidationRecord): Promise<ValidationRecord> => {
-        if (GOOGLE_APPS_SCRIPT_URL) {
-            // We use 'add' but we pass the full record
-            await _postToSheet('db_history', 'add', record);
-            return record;
-        } else {
-            const history = _readTableLocal<ValidationRecord>('db_history');
-            const updatedHistory = [record, ...history];
-            _writeTableLocal('db_history', updatedHistory);
-            return record;
+    addHistoryRecord: async (record: ValidationRecord, full: HistoryFullImages = {}): Promise<ValidationRecord> => {
+        return await apiJson<ValidationRecord>('/api/history', 'POST', {
+            ...record,
+            barcodeImageFull: full.barcode || undefined,
+            batchImageFull: full.batch || undefined,
+        });
+    },
+
+    /** Returns the full-size photo of a record, or null if the server has none. */
+    getHistoryImage: async (recordId: string, which: 'barcode' | 'batch'): Promise<string | null> => {
+        try {
+            const { dataUrl } = await apiJson<{ dataUrl: string }>(
+                `/api/history/${encodeURIComponent(recordId)}/images/${which}`);
+            return dataUrl;
+        } catch (error) {
+            if (error instanceof ApiError && error.status === 404) return null;
+            throw error;
         }
     },
+
+    /** Keeps a record on this device until it can be uploaded; returns false if storage is full. */
+    queueLocalHistory: (record: ValidationRecord): boolean =>
+        _writeTableLocal(LOCAL_HISTORY_KEY, [record, ..._readTableLocal<ValidationRecord>(LOCAL_HISTORY_KEY)]),
+
+    isOffline: _isOffline,
 
     clearHistory: async (): Promise<void> => {
-        if (GOOGLE_APPS_SCRIPT_URL) {
-            await _postToSheet('db_history', 'delete', '__all__');
-        } else {
-            _writeTableLocal('db_history', []);
+        await apiJson<void>('/api/history', 'DELETE');
+    },
+
+    /** Returns history waiting on this device: saved by older versions of the app, or while offline. */
+    getLocalHistory: (): ValidationRecord[] => _readTableLocal<ValidationRecord>(LOCAL_HISTORY_KEY),
+
+    /** Removes the given records from this device's old local history once they're on the server. */
+    forgetLocalHistory: (ids: Set<string>): void => {
+        const remaining = _readTableLocal<ValidationRecord>(LOCAL_HISTORY_KEY).filter(r => !ids.has(r.id));
+        if (remaining.length) _writeTableLocal(LOCAL_HISTORY_KEY, remaining);
+        else {
+            try {
+                window.localStorage.removeItem(LOCAL_HISTORY_KEY);
+            } catch {
+                // Storage blocked: nothing to clean up.
+            }
         }
-    }
+    },
 };

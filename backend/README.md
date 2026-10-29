@@ -10,6 +10,7 @@ Express API for the validator: sign-in, user management, product CRUD and OCR. I
 - Show the local DB path: `npm run db:path`
 - Reset the local DB (reseeds on next start): `npm run db:reset`
 - Check PaddleOCR: `npm run ocr:paddle:check`
+- Run the API tests: `npm test` (each test starts the server on a temporary SQLite file)
 
 Settings are read from `../.env.local` (see `../.env.example`).
 
@@ -17,8 +18,9 @@ Settings are read from `../.env.local` (see `../.env.example`).
 
 | File | What it does |
 |---|---|
-| `server.js` | Routes. Sends each OCR request to Gemini, falling back to local OCR only when Gemini is unreachable |
-| `db.js` | libSQL client (Turso when `TURSO_DATABASE_URL` is set, else `data/app.db`), schema, seeding, product and user CRUD, account rules |
+| `server.js` | Routes, session checks (`requireAuth`, admin-only routes) and history endpoints. Sends each OCR request to Gemini, falling back to local OCR only when Gemini is unreachable |
+| `db.js` | libSQL client (Turso when `TURSO_DATABASE_URL` is set, else `data/app.db`), schema, seeding, products, users (scrypt-hashed passwords), sessions, validation history |
+| `test/api.test.js` | End-to-end API tests (`npm test`) |
 | `geminiOcr.js` | Cloud OCR with Gemini (`GEMINI_API_KEY`, `GEMINI_MODEL`, default `gemini-3.8-flash`) |
 | `localOcr.js` | Offline OCR: PaddleOCR → Tesseract.js for text, ZXing for barcodes, plus parsing of batch codes, dates and prices |
 | `seedProducts.js` | Products inserted into an empty database |

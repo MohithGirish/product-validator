@@ -1,7 +1,8 @@
 // Root component. Wraps everything in the theme, toast and auth providers,
-// shows LoginPage until someone signs in, then switches between the Validator,
-// Database, History and Admin pages with local state (no router). The Admin page
-// renders only for admins.
+// shows a loading screen while a stored sign-in is checked, LoginPage until
+// someone signs in, then switches between the Validator, Database, History,
+// Analyze and Admin pages with local state (no router). The Admin page renders
+// only for admins.
 
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -14,10 +15,19 @@ import Header from './components/Header';
 import { Page } from './types';
 import DatabasePage from './components/DatabasePage';
 import AdminPage from './components/AdminPage';
+import AnalysisPage from './components/AnalysisPage';
 
 const AppContent: React.FC = () => {
-  const { user } = useAuth();
+  const { user, isRestoring } = useAuth();
   const [currentPage, setCurrentPage] = useState<Page>(Page.VALIDATOR);
+
+  if (isRestoring) {
+    return (
+      <div className="min-h-dvh bg-[#F4F6FA] flex items-center justify-center" role="status">
+        <p className="text-sm font-medium text-slate-500">Signing you in…</p>
+      </div>
+    );
+  }
 
   if (!user) {
     return <LoginPage />;
@@ -36,6 +46,7 @@ const AppContent: React.FC = () => {
         {currentPage === Page.VALIDATOR && <ValidatorPage />}
         {currentPage === Page.DATABASE && <DatabasePage />}
         {currentPage === Page.HISTORY && <HistoryPage />}
+        {currentPage === Page.ANALYSIS && <AnalysisPage />}
         {currentPage === Page.ADMIN && user.role === 'admin' && <AdminPage />}
       </main>
     </div>
