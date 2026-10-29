@@ -1,7 +1,8 @@
 // Admin-only page.
 // - User Management: list accounts, add users (with a live password-policy
 //   checklist) and remove users. The backend enforces the account rules.
-// - Administrator Log: all validation records, with CSV export.
+// - Administrator Log: every user's validation records (from the server), with
+//   CSV export.
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';

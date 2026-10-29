@@ -3,7 +3,8 @@
 //   Several matches -> pick the market type; no match -> admins can add the
 //   product (ProductFormModal), staff get a "not found" message.
 // Step 2: scan the printed batch-code block, check it with validateFullCode,
-//   show ResultModal and save the record to history.
+//   show ResultModal and save the record to history (on the server, via
+//   AuthContext.addHistoryRecord).
 // The badge at the top shows which OCR engine answered (Cloud or Local).
 
 import React, { useState, useRef, useCallback } from 'react';
@@ -309,6 +310,7 @@ const ValidatorPage: React.FC = () => {
   };
 
   const handleSaveNewProduct = async (productData: ProductData) => {
+    // A failure propagates to ProductFormModal, which stays open and shows it.
     await databaseService.addProduct(productData);
     setIsAddProductModalOpen(false);
     setFoundProduct(productData);

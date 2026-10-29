@@ -1,5 +1,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// DATA LAYER — products + users.
+// DATA LAYER — products, users, sign-in sessions and validation history.
+//
+// Passwords are stored as scrypt hashes ("scrypt$<salt>$<hash>"); any older
+// plain-text password is hashed in place at startup. Sessions store only a
+// SHA-256 of the token, so a copy of the database can't be used to sign in.
 //
 // Primary store: Turso (cloud libSQL) when TURSO_DATABASE_URL is set. This is the
 // source of truth in production and persists across restarts/redeploys.
@@ -13,9 +17,13 @@
 //     server is failing, init errors out rather than silently using the file.
 //     To fail over, clear the Turso env vars and restart.
 // ─────────────────────────────────────────────────────────────────────────────
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { promisify } = require('util');
 const { createClient } = require('@libsql/client');
+
+const scrypt = promisify(crypto.scrypt);
 
 const seedProducts = require('./seedProducts');
 
@@ -133,12 +141,146 @@ async function initializeDatabase() {
     for (const user of SEED_USERS) {
       await run(
         'INSERT INTO users (id, username, password, role, is_protected) VALUES (?, ?, ?, ?, ?)',
-        [user.id, user.username, user.password, user.role, user.isProtected ? 1 : 0]
+        [user.id, user.username, await hashPassword(user.password), user.role, user.isProtected ? 1 : 0]
       );
     }
   }
 
   await ensureProtectedAdmin();
+
+  // Migration: hash any password still stored in plain text (databases created
+  // before hashing existed). The same passwords keep working afterwards.
+  const plainUsers = await all("SELECT id, password FROM users WHERE password NOT LIKE 'scrypt$%'");
+  for (const u of plainUsers) {
+    await run('UPDATE users SET password = ? WHERE id = ?', [await hashPassword(u.password), u.id]);
+  }
+
+  // ── Sessions table ─────────────────────────────────────────────────────────
+  await run(`
+    CREATE TABLE IF NOT EXISTS sessions (
+      token_hash TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      expires_at TEXT NOT NULL
+    )
+  `);
+  await run("DELETE FROM sessions WHERE expires_at <= datetime('now')");
+
+  // ── History table ──────────────────────────────────────────────────────────
+  // `record` is the ValidationRecord JSON with small thumbnails; the full-size
+  // images sit in their own columns so the list stays light.
+  await run(`
+    CREATE TABLE IF NOT EXISTS history (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      timestamp TEXT NOT NULL,
+      record TEXT NOT NULL,
+      barcode_image TEXT,
+      batch_image TEXT
+    )
+  `);
+  await run('CREATE INDEX IF NOT EXISTS idx_history_user_time ON history(user_id, timestamp)');
+}
+
+// ── Passwords ────────────────────────────────────────────────────────────────
+
+async function hashPassword(password) {
+  const salt = crypto.randomBytes(16);
+  const hash = await scrypt(String(password), salt, 64);
+  return `scrypt$${salt.toString('base64')}$${hash.toString('base64')}`;
+}
+
+// Checked when the username doesn't exist, so an unknown name takes as long
+// to reject as a wrong password and response times don't reveal usernames.
+const DUMMY_PASSWORD_HASH = `scrypt$${Buffer.alloc(16).toString('base64')}$${Buffer.alloc(64).toString('base64')}`;
+
+async function verifyPassword(password, stored) {
+  const [scheme, saltB64, hashB64] = String(stored || '').split('$');
+  if (scheme !== 'scrypt' || !saltB64 || !hashB64) return false;
+  const expected = Buffer.from(hashB64, 'base64');
+  const actual = await scrypt(String(password), Buffer.from(saltB64, 'base64'), expected.length);
+  return crypto.timingSafeEqual(actual, expected);
+}
+
+// ── Sessions ─────────────────────────────────────────────────────────────────
+
+// Sign-in lasts 7 days, then the user signs in again.
+const SESSION_DAYS = 7;
+
+const hashToken = (token) => crypto.createHash('sha256').update(String(token)).digest('hex');
+
+async function createSession(userId) {
+  const token = crypto.randomBytes(32).toString('base64url');
+  await run(
+    `INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, datetime('now', '+${SESSION_DAYS} days'))`,
+    [hashToken(token), userId]
+  );
+  return token;
+}
+
+async function findUserBySession(token) {
+  if (!token) return null;
+  const row = await get(
+    `SELECT u.id, u.username, u.role, u.is_protected FROM sessions s
+     JOIN users u ON u.id = s.user_id
+     WHERE s.token_hash = ? AND s.expires_at > datetime('now')`,
+    [hashToken(token)]
+  );
+  return mapRowToUser(row);
+}
+
+async function deleteSession(token) {
+  await run('DELETE FROM sessions WHERE token_hash = ?', [hashToken(token)]);
+}
+
+// ── Validation history ───────────────────────────────────────────────────────
+
+const HISTORY_IMAGES = { barcode: 'barcode_image', batch: 'batch_image' };
+
+function rowToHistoryRecord(row) {
+  return { ...JSON.parse(row.record), id: row.id, userId: row.user_id, timestamp: row.timestamp };
+}
+
+// Saves one validation record for `userId` and returns the stored record.
+// Saving the same id again for the same user returns the existing record, so
+// retries and the one-time upload of old on-device history can't create
+// duplicates. Returns null when the id already belongs to another user.
+async function addHistoryRecord(userId, raw) {
+  const id = typeof raw.id === 'string' ? raw.id.trim() : '';
+  if (!id || id.length > 100) throw new Error('A history record needs a valid id.');
+  const parsed = Date.parse(raw.timestamp);
+  const timestamp = Number.isNaN(parsed) ? new Date().toISOString() : new Date(parsed).toISOString();
+
+  const { barcodeImageFull, batchImageFull, userId: _ignored, id: _id, timestamp: _ts, ...record } = raw;
+  const result = await run(
+    'INSERT OR IGNORE INTO history (id, user_id, timestamp, record, barcode_image, batch_image) VALUES (?, ?, ?, ?, ?, ?)',
+    [id, userId, timestamp, JSON.stringify(record), barcodeImageFull || null, batchImageFull || null]
+  );
+  if (result.changes > 0) return { ...record, id, userId, timestamp };
+
+  const existing = await get('SELECT id, user_id, timestamp, record FROM history WHERE id = ?', [id]);
+  return existing && existing.user_id === userId ? rowToHistoryRecord(existing) : null;
+}
+
+// Newest first. Pass a userId to get only that user's records.
+async function getHistory(userId = null) {
+  const rows = userId
+    ? await all('SELECT id, user_id, timestamp, record FROM history WHERE user_id = ? ORDER BY timestamp DESC', [userId])
+    : await all('SELECT id, user_id, timestamp, record FROM history ORDER BY timestamp DESC');
+  return rows.map(rowToHistoryRecord);
+}
+
+// Returns the full-size image ('barcode' | 'batch') of a record, or null when it
+// doesn't exist or `userId` is set and the record belongs to someone else.
+async function getHistoryImage(id, which, userId = null) {
+  if (!Object.hasOwn(HISTORY_IMAGES, which)) return null;
+  const column = HISTORY_IMAGES[which];
+  const row = await get(`SELECT user_id, ${column} AS image FROM history WHERE id = ?`, [id]);
+  if (!row || !row.image || (userId && row.user_id !== userId)) return null;
+  return row.image;
+}
+
+async function clearHistory() {
+  await run('DELETE FROM history');
 }
 
 // Self-heal the permanent administrator. Protection is now a durable property
@@ -157,7 +299,7 @@ async function ensureProtectedAdmin() {
   } else {
     await run(
       'INSERT INTO users (id, username, password, role, is_protected) VALUES (?, ?, ?, ?, 1)',
-      [seed.id, seed.username, seed.password, 'admin']
+      [seed.id, seed.username, await hashPassword(seed.password), 'admin']
     );
   }
 }
@@ -193,8 +335,9 @@ async function getUsers() {
 }
 
 async function findUserByCredentials(username, password) {
-  const row = await get('SELECT * FROM users WHERE username = ? AND password = ?', [username, password]);
-  return mapRowToUser(row);
+  const row = await get('SELECT * FROM users WHERE username = ?', [username]);
+  const valid = await verifyPassword(password, row ? row.password : DUMMY_PASSWORD_HASH);
+  return row && valid ? mapRowToUser(row) : null;
 }
 
 // Password rule: at least 6 characters, at least one letter (upper or lower),
@@ -222,7 +365,7 @@ async function createUser(rawUser) {
   if (existing) throw new Error('A user with that username already exists.');
 
   const id = `user-${Date.now()}`;
-  await run('INSERT INTO users (id, username, password, role) VALUES (?, ?, ?, ?)', [id, username, password, role]);
+  await run('INSERT INTO users (id, username, password, role) VALUES (?, ?, ?, ?)', [id, username, await hashPassword(password), role]);
   const row = await get('SELECT id, username, role, created_at FROM users WHERE id = ?', [id]);
   return mapRowToUser(row);
 }
@@ -258,6 +401,7 @@ async function deleteUser(id) {
 
   try {
     const result = await run('DELETE FROM users WHERE id = ?', [id]);
+    await run('DELETE FROM sessions WHERE user_id = ?', [id]);
     return { ok: result.changes > 0 };
   } catch (err) {
     // Safety net: the BEFORE DELETE trigger aborts protected-row deletes even if
@@ -396,5 +540,12 @@ module.exports = {
   getUsers,
   findUserByCredentials,
   createUser,
-  deleteUser
+  deleteUser,
+  createSession,
+  findUserBySession,
+  deleteSession,
+  addHistoryRecord,
+  getHistory,
+  getHistoryImage,
+  clearHistory,
 };

@@ -1,7 +1,8 @@
 // Sends an image to one of the backend OCR endpoints (/api/extract-product,
 // /extract-batch, /extract-batch-format, /analyze-image) as multipart form data,
-// with a 60-second timeout. Results include which engine answered
-// ('gemini' or 'local').
+// with a 60-second timeout and the session token (see apiClient.ts). Results
+// include which engine answered ('gemini' or 'local').
+import { ApiError, apiFetch } from './apiClient';
 
 const API_BASE = '/api';
 const OCR_TIMEOUT_MS = 60_000;
@@ -18,10 +19,10 @@ async function postImage(endpoint: string, imageFile: File, extra?: Record<strin
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), OCR_TIMEOUT_MS);
 
-  let res: Response;
   try {
-    res = await fetch(`${API_BASE}${endpoint}`, { method: 'POST', body: form, signal: controller.signal });
+    return await apiFetch(`${API_BASE}${endpoint}`, { method: 'POST', body: form, signal: controller.signal });
   } catch (err: any) {
+    if (err instanceof ApiError) throw err;
     if (err?.name === 'AbortError') {
       throw new Error('OCR request timed out. Please try again.');
     }
@@ -31,12 +32,6 @@ async function postImage(endpoint: string, imageFile: File, extra?: Record<strin
   } finally {
     clearTimeout(timeoutId);
   }
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error || `Backend error: ${res.status}`);
-  }
-  return res;
 }
 
 export type OcrEngine = 'gemini' | 'local';

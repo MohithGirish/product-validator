@@ -1,6 +1,6 @@
 // Top bar (branding, user avatar, the ⋮ menu) and page navigation: tabs in
-// the header on wider screens, a fixed bottom tab bar on phones. The Admin tab
-// appears only for admins.
+// the header on wider screens, a fixed bottom tab bar on phones. Tabs:
+// Validator, Database, History, Analyze, and Admin (admins only).
 
 import React from 'react';
 import { useAuth } from '../hooks/useAuth';
@@ -9,6 +9,7 @@ import { ValidatorIcon } from './icons/ValidatorIcon';
 import { HistoryIcon } from './icons/HistoryIcon';
 import { DatabaseIcon } from './icons/DatabaseIcon';
 import { AdminIcon } from './icons/AdminIcon';
+import { DocumentScannerIcon } from './icons/DocumentScannerIcon';
 import ThemeMenu from './ThemeMenu';
 
 interface HeaderProps {
@@ -24,6 +25,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, setCurrentPage }) => {
     { page: Page.VALIDATOR, label: 'Validator', Icon: ValidatorIcon },
     { page: Page.DATABASE,  label: 'Database',  Icon: DatabaseIcon },
     { page: Page.HISTORY,   label: 'History',   Icon: HistoryIcon },
+    { page: Page.ANALYSIS,  label: 'Analyze',   Icon: DocumentScannerIcon },
     ...(isAdmin ? [{ page: Page.ADMIN, label: 'Admin', Icon: AdminIcon }] : []),
   ];
 

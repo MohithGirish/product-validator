@@ -1,5 +1,7 @@
 // Product database page: searchable product list (table on desktop, cards on
-// phones) and CSV export; admins can add, edit and delete. Also exports
+// phones) and CSV export; admins can add, edit and delete (the server enforces
+// this too). Load and delete errors are shown as toasts; if a save fails, the
+// form stays open with what was typed. Also exports
 // ProductFormModal, the add/edit form that can fill in the barcode and batch
 // format by scanning label images; ValidatorPage reuses it when an admin scans
 // an unknown barcode.
@@ -42,7 +44,8 @@ const initialFormData: Omit<ProductData, 'id'> = {
 export const ProductFormModal: React.FC<{
     isOpen: boolean;
     onClose: () => void;
-    onSave: (product: ProductData) => void;
+    /** Saves the product; a rejected promise keeps the form open with its contents. */
+    onSave: (product: ProductData) => Promise<void> | void;
     product: ProductData | null;
     initialBarcode?: string;
     initialProductName?: string;
@@ -338,8 +341,12 @@ export const ProductFormModal: React.FC<{
           mrp: formData.mrp ? parseFloat(String(formData.mrp)) : null,
           shelfLife: formData.shelfLife ? parseInt(String(formData.shelfLife), 10) : null,
         };
-        onSave(productToSave);
-        onClose();
+        try {
+            await onSave(productToSave);
+            onClose();
+        } catch (err: any) {
+            alert(`Could not save the product: ${err.message || 'server error'}`);
+        }
     };
     
     const getModalTitle = () => {
@@ -759,10 +766,14 @@ const DatabasePage: React.FC = () => {
 
     const fetchProducts = useCallback(async () => {
         setIsLoading(true);
-        const data = await databaseService.getProducts();
-        setProducts(data);
-        setIsLoading(false);
-    }, []);
+        try {
+            setProducts(await databaseService.getProducts());
+        } catch (err: any) {
+            showToast(err.message || 'Failed to load products.', 'error');
+        } finally {
+            setIsLoading(false);
+        }
+    }, [showToast]);
 
     useEffect(() => {
         fetchProducts();
@@ -781,8 +792,8 @@ const DatabasePage: React.FC = () => {
     const handleSaveProduct = async (product: ProductData) => {
         const wasEditing = Boolean(editingProduct);
         await (wasEditing ? databaseService.updateProduct(product) : databaseService.addProduct(product));
-        fetchProducts(); // Refresh list
         showToast(wasEditing ? 'Product updated' : 'Product added', 'success');
+        fetchProducts(); // Refresh list
     };
     
     const handleRequestDelete = (product: ProductData) => {
@@ -793,9 +804,13 @@ const DatabasePage: React.FC = () => {
     const handleConfirmDelete = async () => {
         if (productToDelete) {
             const name = productToDelete.productName;
-            await databaseService.deleteProduct(productToDelete.id);
+            try {
+                await databaseService.deleteProduct(productToDelete.id);
+                showToast(`${name} deleted`, 'success');
+            } catch (err: any) {
+                showToast(err.message || 'Failed to delete product.', 'error');
+            }
             fetchProducts();
-            showToast(`${name} deleted`, 'success');
         }
         setIsDeleteModalOpen(false);
         setProductToDelete(null);

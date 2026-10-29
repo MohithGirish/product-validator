@@ -9,9 +9,11 @@ Live deployment: Render (`product-validator-7i2l.onrender.com`).
 - **Two-step OCR validation** — barcode scan → batch code validation
 - **Full-code verification** — checks batch-code format, MRP/price, production & expiry dates, shelf life, and a per-line comparison of the printed info block (not just the format line)
 - **Cloud OCR / Local OCR** — uses Google Gemini OCR by default; automatically falls back to local OCR (PaddleOCR → Tesseract) when Gemini is unreachable
-- **Role-based access** — Admin sees all users' history and can manage products and users; Staff sees only their own records
+- **Role-based access** — Admin sees all users' history and can manage products and users; Staff sees only their own records. Enforced by the server, not just hidden in the UI
+- **Secure sign-in** — passwords stored as scrypt hashes; a session token keeps you signed in across reloads for 7 days
 - **User management** — admins add/remove sign-in accounts; enforced password policy and account-protection invariants (see below)
-- **Validation history** — audit log with thumbnails of scanned images; admin can clear all history. History is saved in the browser, not on the server (see [Persistence](#persistence--deployment))
+- **Validation history** — audit log stored on the server, so every device sees the same records; thumbnails in the list and the full-size photo on tap; admin can clear all history
+- **Image analysis** — the Analyze tab runs free-form OCR on any label image
 - **Product database** — CRUD with batch format editor and auto-inference from label images
 - **CSV export** — the product list and the full validation log
 - **Mobile-first responsive UI** — bottom tab navigation, card layouts that replace wide tables on phones, a full-screen portrait camera, safe-area (notch / gesture-bar) handling, and dialogs that always stay reachable
@@ -37,12 +39,13 @@ Every source file starts with a short comment describing what it does.
 factory-product-code-validator/
 ├── backend/
 │   ├── server.js               # Express API (port 3001): auth, users, products, OCR routing; serves the built frontend in production
-│   ├── db.js                   # libSQL/Turso schema, seeding + CRUD for products and users
+│   ├── db.js                   # libSQL/Turso schema, seeding; products, users, sessions, history
 │   ├── geminiOcr.js            # Cloud OCR (Gemini)
 │   ├── localOcr.js             # Offline OCR: PaddleOCR / Tesseract + ZXing barcode decoding
 │   ├── seedProducts.js         # Products seeded into an empty database
 │   ├── eng.traineddata         # Tesseract English language data
 │   ├── data/app.db             # Local SQLite fallback DB (created on demand, not committed)
+│   ├── test/api.test.js        # API tests (npm test)
 │   └── scripts/
 │       ├── paddle_ocr_runner.py # PaddleOCR bridge (JSON over stdin/stdout)
 │       ├── printDbPath.js      # npm run db:path
@@ -57,17 +60,19 @@ factory-product-code-validator/
 │   │   ├── HistoryPage.tsx     # Validation audit log
 │   │   ├── AdminPage.tsx       # User management + administrator log
 │   │   ├── LoginPage.tsx, Header.tsx, ThemeMenu.tsx, CameraModal.tsx
-│   │   ├── AnalysisPage.tsx    # Free-form image analysis (not linked in the UI)
+│   │   ├── AnalysisPage.tsx    # Free-form image analysis (Analyze tab)
 │   │   ├── common/             # Modal, ConfirmDialog, Portal, Toast, Spinner
 │   │   └── icons/              # Inline SVG icons
-│   ├── context/                # AuthContext (user + history), ThemeContext
+│   ├── context/                # AuthContext (sign-in, session restore, history), ThemeContext
 │   ├── hooks/                  # useAuth, useBodyScrollLock, useLocalStorage
 │   ├── services/
-│   │   ├── databaseService.ts  # Users/products via the API; history in localStorage
+│   │   ├── apiClient.ts        # fetch with the session token; signs out on 401
+│   │   ├── databaseService.ts  # Users, products and history via the API
 │   │   └── imageExtractionService.ts # Calls the OCR endpoints
 │   ├── utils/
 │   │   ├── validateProduct.ts  # Full-code validation logic
-│   │   └── exportUtils.ts      # CSV download
+│   │   ├── exportUtils.ts      # CSV download
+│   │   └── imageUtils.ts       # Shrinks photos for history (thumbnail + full size)
 │   ├── constants.ts            # Offline seed data for localStorage
 │   └── types.ts
 ├── package.json                # Workspace scripts (dev, build, start)
@@ -167,12 +172,11 @@ Open [http://localhost:3002](http://localhost:3002). The dev server proxies `/ap
 
 ## Persistence & Deployment
 
-| Data | Where it lives |
-|---|---|
-| Products, users | libSQL database on the server (Turso or local file, see below) |
-| Validation history | **The browser's `localStorage`** (key `db_history`) on each device |
+Products, users, sign-in sessions and validation history all live in a libSQL database on the server. History stores a small thumbnail of each photo for the list and a 1280px copy for the full-size viewer, so each record is a few hundred KB at most.
 
-Validation history is never sent to the server. Each phone or computer keeps its own history, an admin only sees records made on the same device, and clearing the browser's site data deletes it. See [Known limitations](#known-limitations).
+**Offline:** if a scan result can't reach the server, it is kept on the device (with a notice) and uploaded automatically after the next successful save or sign-in.
+
+**Upgrading from a version that kept history in the browser:** history saved on a device by older versions is uploaded automatically the next time someone signs in on that device. Staff upload their own records; an admin uploads every record on the device, each keeping its original author. Uploaded records are then removed from the device, and records that fail to upload stay for the next sign-in.
 
 The server database is selected purely by environment variables:
 
@@ -222,7 +226,15 @@ Seeded into the `users` table on first run (against an empty database):
 | `User3` | `User3@123` | Staff — own history only | |
 | `User4` | `User4@123` | Staff — own history only | |
 
-> These are starting credentials for setup. Change the staff passwords before real use (remove and re-create via the Admin → User Management screen). Passwords are never sent back to the client.
+> These are starting credentials for setup. Change the staff passwords before real use (remove and re-create via the Admin → User Management screen). Passwords are stored as scrypt hashes and never sent back to the client. Databases created before hashing existed are converted automatically at startup; the same passwords keep working.
+
+## Sign-in & Access Control
+
+- Signing in returns a **session token**. The browser keeps it in `localStorage` and sends it as `Authorization: Bearer <token>`, so a page reload keeps you signed in. Sessions last **7 days**; signing out, or an admin removing your account, ends them at once.
+- Every `/api` route except `/api/auth/login` and `/api/health` requires a valid token (`401` otherwise).
+- **Admin-only** (`403` for staff): listing, adding and removing users; adding, editing and deleting products; clearing history.
+- **Staff** can read products, run OCR, save validation results and see their own history (including full-size photos of their own records only).
+- The database stores only a SHA-256 hash of each token, so a copy of the database can't be used to sign in.
 
 ## User Management & Account Rules
 
@@ -302,29 +314,35 @@ The UI is designed mobile-first and is the primary deployment target:
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/api/health` | Server status and whether Gemini is configured |
-| `POST` | `/api/auth/login` | Authenticate; returns the user (never the password) |
-| `GET` | `/api/users` | List users (admins first, then staff) |
-| `POST` | `/api/users` | Create a user (enforces the password policy) |
-| `DELETE` | `/api/users/:id` | Remove a user (blocked for the protected admin / last admin / last staff) |
+| `POST` | `/api/auth/login` | Sign in; returns `{ user, token }` (never the password) |
+| `GET` | `/api/auth/me` | The user for the current token |
+| `POST` | `/api/auth/logout` | End the current session |
+| `GET` | `/api/users` | List users (admins first, then staff) — admin |
+| `POST` | `/api/users` | Create a user (enforces the password policy) — admin |
+| `DELETE` | `/api/users/:id` | Remove a user (blocked for the protected admin / last admin / last staff) — admin |
 | `GET` | `/api/products` | List all products |
 | `GET` | `/api/products/barcode/:barcode` | Find products by barcode |
-| `POST` | `/api/products` | Create product |
-| `PUT` | `/api/products/:id` | Update product |
-| `DELETE` | `/api/products/:id` | Delete product |
+| `POST` | `/api/products` | Create product — admin |
+| `PUT` | `/api/products/:id` | Update product — admin |
+| `DELETE` | `/api/products/:id` | Delete product — admin |
+| `GET` | `/api/history` | Validation history, newest first (staff: own records; admin: all) |
+| `POST` | `/api/history` | Save a validation record (same id twice = saved once) |
+| `GET` | `/api/history/:id/images/:which` | Full-size `barcode` or `batch` photo of a record |
+| `DELETE` | `/api/history` | Clear all history — admin |
 | `POST` | `/api/extract-product` | Extract barcode + product name from image |
 | `POST` | `/api/extract-batch` | Extract batch code, dates and price from image |
 | `POST` | `/api/extract-batch-format` | Infer batch format from a label image |
 | `POST` | `/api/analyze-image` | Free-form OCR analysis of an image |
 
-> The OCR endpoints take a multipart `image` field (max **4 MB**), are rate-limited to 20 requests/minute per IP, and return an `engine` field (`gemini` or `local`).
+All routes except login and health need `Authorization: Bearer <token>`. The OCR endpoints take a multipart `image` field (max **4 MB**), are rate-limited to 20 requests/minute per IP, and return an `engine` field (`gemini` or `local`).
 
-## Known limitations
+## Tests
 
-- **History is per-browser.** Validation records live in `localStorage`, not the database (see above).
-- **No server-side sessions.** The API trusts the client: the user-management and product endpoints don't check who is calling, and the frontend only hides admin screens from staff. Acceptable on a trusted factory network; not for the open internet.
-- **Passwords are stored in plain text** in the `users` table.
-- **Sign-in isn't remembered.** Reloading the page signs the user out.
-- `AnalysisPage.tsx` (free-form image analysis) is built but not linked in the navigation.
+```bash
+cd backend && npm test
+```
+
+Starts the real server against a temporary SQLite file for each test and checks sign-in, sessions, password hashing (including converting old plain-text passwords), access control, history, and the existing product and account rules. No external service is called.
 
 ## Scripts
 
@@ -338,5 +356,6 @@ The UI is designed mobile-first and is the primary deployment target:
 | `cd backend && npm run db:path` | Print the path of the local SQLite file |
 | `cd backend && npm run db:reset` | Delete the **local** SQLite file (`backend/data/app.db`) so it's recreated + reseeded on next start. Does **not** affect a Turso database — reset that from the Turso dashboard. |
 | `cd backend && npm run ocr:paddle:check` | Verify PaddleOCR installation |
+| `cd backend && npm test` | Run the API tests |
 
-There is no test suite, linter or formatter configured yet.
+No linter or formatter is configured yet, and the frontend has no automated tests.

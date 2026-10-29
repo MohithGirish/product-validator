@@ -4,6 +4,7 @@
   "type": "commonjs",
   "scripts": {
     "start": "node server.js",
+    "test": "node --test test/*.test.js",
     "dev": "nodemon --watch server.js --watch db.js --watch seedProducts.js --watch localOcr.js --watch geminiOcr.js server.js",
     "db:path": "node scripts/printDbPath.js",
     "db:reset": "node scripts/resetDb.js",

@@ -65,5 +65,6 @@ export enum Page {
     VALIDATOR = 'validator',
     DATABASE = 'database',
     HISTORY = 'history',
+    ANALYSIS = 'analysis',
     ADMIN = 'admin',
 }
