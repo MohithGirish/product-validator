@@ -1,3 +1,5 @@
+// Inline SVG icon: plus (add). Size and color come from the className prop.
+// Used in AdminPage, DatabasePage.
 
 import React from 'react';
 

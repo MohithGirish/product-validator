@@ -1,3 +1,6 @@
+// Inline SVG icon: download arrow. Size and color come from the className prop.
+// Used in AdminPage, DatabasePage.
+
 import React from 'react';
 
 export const DownloadIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5' }) => (

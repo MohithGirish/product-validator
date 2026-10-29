@@ -1,3 +1,5 @@
+// Inline SVG icon: pencil (edit). Size and color come from the className prop.
+// Used in DatabasePage.
 
 import React from 'react';
 

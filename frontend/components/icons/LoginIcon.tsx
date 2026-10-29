@@ -1,3 +1,5 @@
+// Inline SVG icon: sign-in. Size and color come from the className prop.
+// Used in LoginPage.
 
 import React from 'react';
 

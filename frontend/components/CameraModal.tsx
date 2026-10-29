@@ -1,3 +1,6 @@
+// Full-screen camera for taking label photos (prefers the rear camera). The
+// captured shot is handed back to the caller as a File.
+
 import React, { useRef, useEffect, useState } from 'react';
 import { XIcon } from './icons/XIcon';
 import { CameraIcon } from './icons/CameraIcon';

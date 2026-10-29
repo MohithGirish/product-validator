@@ -1,3 +1,6 @@
+// Validation history: staff see their own records, admins see everyone's with
+// the user's name. Shows image thumbnails with a full-size viewer, and admins
+// can clear all history.
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';

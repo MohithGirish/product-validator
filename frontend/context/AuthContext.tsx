@@ -1,3 +1,8 @@
+// Signed-in user and validation history, shared through useAuth().
+// Credentials are checked by the backend. History comes from databaseService
+// (this browser's localStorage); staff see only their own records, admins see
+// all. The session lives in memory only, so reloading the page signs out.
+
 import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect } from 'react';
 import { User, ValidationRecord } from '../types';
 import { databaseService } from '../services/databaseService';

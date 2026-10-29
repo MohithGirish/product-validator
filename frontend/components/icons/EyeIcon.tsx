@@ -1,3 +1,6 @@
+// Inline SVG icon: eye and crossed-out eye (show/hide password). Size and color come from the className prop.
+// Used in AdminPage, LoginPage.
+
 import React from 'react';
 
 export const EyeIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5' }) => (

@@ -1,3 +1,6 @@
+// Toast notifications: ToastProvider plus a useToast() hook for short
+// success, error and info messages.
+
 import React, { createContext, useCallback, useContext, useState, ReactNode } from 'react';
 
 type ToastType = 'success' | 'error' | 'info';

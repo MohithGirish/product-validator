@@ -1,3 +1,11 @@
+// Express API server (port 3001 by default, PORT to change).
+// Handles sign-in, user management, product CRUD and the four OCR endpoints.
+// Each OCR request goes to Gemini first and falls back to local OCR only when
+// Gemini is unreachable (network error or timeout); any other Gemini error is
+// returned to the caller. OCR routes are rate-limited to 20 requests/minute per
+// IP and accept images up to 4 MB. In production it also serves the built
+// frontend from ../frontend/dist.
+
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') });
 

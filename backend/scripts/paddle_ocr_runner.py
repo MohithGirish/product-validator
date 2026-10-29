@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+"""Runs PaddleOCR on one image for backend/localOcr.js.
+
+Reads a JSON object from stdin ({"imageBase64": ..., "lang": "en"}) and writes
+one JSON object to stdout: {"ok": true, "text", "lines", "confidence", "words"}
+on success, or {"ok": false, "error"} with exit code 2 on failure.
+Run with --health to check only that PaddleOCR can be imported
+(npm run ocr:paddle:check).
+"""
 import base64
 import json
 import os

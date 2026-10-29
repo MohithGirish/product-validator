@@ -1,3 +1,6 @@
+// Inline SVG icon: camera. Size and color come from the className prop.
+// Used in AnalysisPage, CameraModal, DatabasePage, ValidatorPage.
+
 import React from 'react';
 
 export const CameraIcon: React.FC<{className?: string}> = ({ className = "h-6 w-6" }) => (

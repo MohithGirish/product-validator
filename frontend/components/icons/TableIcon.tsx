@@ -1,3 +1,6 @@
+// Inline SVG icon: table. Size and color come from the className prop.
+// Not used anywhere at the moment.
+
 import React from 'react';
 
 export const TableIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5' }) => (

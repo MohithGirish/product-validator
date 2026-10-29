@@ -1,3 +1,5 @@
+// Downloads an array of objects as a CSV file. Long numbers such as barcodes
+// are kept as text so Excel doesn't turn them into scientific notation.
 
 export const downloadDataAsCSV = (data: any[], filename: string, excludedKeys: string[] = []) => {
     if (!data || data.length === 0) {

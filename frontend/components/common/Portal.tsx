@@ -1,3 +1,6 @@
+// Renders children into document.body, so full-screen overlays aren't clipped
+// by an ancestor with a transform or animation.
+
 import { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 

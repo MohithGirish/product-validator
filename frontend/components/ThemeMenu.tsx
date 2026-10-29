@@ -1,3 +1,5 @@
+// The ⋮ menu beside the user avatar: theme picker (Light / Dark / System) and Sign out.
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme, ThemeChoice } from '../context/ThemeContext';

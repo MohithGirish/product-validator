@@ -1,3 +1,5 @@
+// Inline SVG icon: X in a circle. Size and color come from the className prop.
+// Used in AnalysisPage, DatabasePage, ValidatorPage.
 
 import React from 'react';
 

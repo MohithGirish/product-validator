@@ -1,24 +1,14 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Frontend
 
-# Frontend App
+React 19 + TypeScript + Vite app for the validator. It talks to the backend in `../backend` over `/api`. Setup and configuration are in the [root README](../README.md).
 
-This folder contains the React + Vite frontend.
+## Run
 
-View your app in AI Studio: https://ai.studio/apps/718cd05e-b590-4f21-ac44-91ff83ac9643
+1. Install dependencies: `npm install`
+2. From the repository root, run frontend + backend together: `npm run dev`
 
-## Run Locally
+Frontend only (from this folder): `npm run dev` — serves on port 3002 and proxies `/api` to the backend on port 3001.
 
-**Prerequisites:**  Node.js
+Production build: `npm run build` (output in `dist/`, served by the backend).
 
-
-1. Install dependencies:
-   `npm install`
-2. From repository root, run frontend + backend together:
-   `npm run dev`
-
-Frontend-only dev (from this folder):
-`npm run dev`
-
-The backend server is located in `../backend`.
+Every source file starts with a short comment describing what it does; `CLAUDE.md` has an architecture overview.

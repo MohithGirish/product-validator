@@ -1,3 +1,10 @@
+// Offline OCR, used when Gemini is not configured or unreachable.
+// Prepares several image variants with sharp, reads text with PaddleOCR (through
+// scripts/paddle_ocr_runner.py) or Tesseract.js (OCR_ENGINE picks which), decodes
+// barcodes with ZXing, and pulls out the batch code (guided by the product's
+// #/@ format, fixing common misreads), dates, price and product name.
+// Exports the same four operations as geminiOcr.js.
+
 const sharp = require('sharp');
 const { recognize } = require('tesseract.js');
 const fs = require('fs');

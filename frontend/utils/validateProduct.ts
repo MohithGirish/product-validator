@@ -1,3 +1,9 @@
+// Full-code validation. Compares the OCR result of a batch-code image with the
+// product's master record and returns one check per item: barcode, batch-code
+// format (# = digit, @ = letter), MRP, production/expiry dates, shelf life, and
+// a line-by-line comparison of the printed info block. Checks marked 'info'
+// are shown but don't change the overall verdict.
+
 import { ProductData, ValidationCheck } from '../types';
 
 /** Build a regex from a batch-number format string (# = digit, @ = uppercase letter, else literal). */

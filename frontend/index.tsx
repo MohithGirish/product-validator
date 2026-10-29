@@ -1,3 +1,4 @@
+// Browser entry point: mounts <App /> into the #root element.
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';

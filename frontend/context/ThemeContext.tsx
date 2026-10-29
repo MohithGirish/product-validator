@@ -1,3 +1,7 @@
+// Light / Dark / System theme. Saves the choice in localStorage ('theme'),
+// toggles the `dark` class on <html>, and follows the OS setting live when set
+// to System. index.html applies the saved choice before first paint.
+
 import React, { createContext, useContext, useEffect, useCallback, ReactNode } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 

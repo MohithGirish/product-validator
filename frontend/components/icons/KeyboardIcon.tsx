@@ -1,3 +1,5 @@
+// Inline SVG icon: keyboard (manual entry). Size and color come from the className prop.
+// Used in HistoryPage.
 
 import React from 'react';
 

@@ -1,3 +1,5 @@
+// Inline SVG icon: check mark in a circle. Size and color come from the className prop.
+// Used in ValidatorPage.
 
 import React from 'react';
 

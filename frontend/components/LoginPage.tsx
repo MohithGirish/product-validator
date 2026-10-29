@@ -1,3 +1,5 @@
+// Sign-in screen. Sends the username and password through AuthContext.login
+// (checked by the backend) and shows an error if sign-in fails.
 
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';

@@ -1,3 +1,5 @@
+// Inline SVG icon: sun (light theme). Size and color come from the className prop.
+// Used in ThemeMenu.
 
 import React from 'react';
 

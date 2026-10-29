@@ -1,3 +1,6 @@
+// Inline SVG icon: document scanner. Size and color come from the className prop.
+// Used in DatabasePage.
+
 import React from 'react';
 
 export const DocumentScannerIcon: React.FC<{className?: string}> = ({ className = "h-5 w-5" }) => (
