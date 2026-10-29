@@ -4,6 +4,8 @@ A factory QC tool (built for ITC Limited) for validating product barcodes and pr
 
 Live deployment: Render (`product-validator-7i2l.onrender.com`).
 
+> **Taking over this project?** Start with the step-by-step [handover and setup guide](docs/Product-Validator-Handover-Guide.docx): getting a Gemini API key, setting up Turso, hosting free on Render, and the handover checklist.
+
 ## Features
 
 - **Two-step OCR validation** — barcode scan → batch code validation
