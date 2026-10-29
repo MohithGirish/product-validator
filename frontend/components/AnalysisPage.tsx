@@ -1,3 +1,7 @@
+// Free-form image analysis: upload or capture an image, add an optional
+// prompt, and show the text returned by /api/analyze-image.
+// Not linked from App.tsx, so it can't currently be reached in the UI.
+
 import React, { useState, useRef, useCallback } from 'react';
 import { analyzeImage, OcrEngine } from '../services/imageExtractionService';
 import Spinner from './common/Spinner';

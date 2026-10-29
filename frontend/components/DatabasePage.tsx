@@ -1,3 +1,8 @@
+// Product database page: searchable product list (table on desktop, cards on
+// phones) and CSV export; admins can add, edit and delete. Also exports
+// ProductFormModal, the add/edit form that can fill in the barcode and batch
+// format by scanning label images; ValidatorPage reuses it when an admin scans
+// an unknown barcode.
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';

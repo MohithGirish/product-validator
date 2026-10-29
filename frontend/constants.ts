@@ -1,3 +1,8 @@
+// Seed data for the browser's localStorage fallback in databaseService.ts.
+// MASTER_PRODUCT_DATABASE fills db_products, used only when the backend can't be
+// reached. MOCK_USERS is still written to localStorage but nothing reads it:
+// sign-in goes to the backend (real accounts are seeded in backend/db.js).
+
 import { ProductData, User } from './types';
 
 export const MOCK_USERS: User[] = [

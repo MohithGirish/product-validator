@@ -1,3 +1,6 @@
+// Inline SVG icon: magnifying glass (search). Size and color come from the className prop.
+// Used in DatabasePage.
+
 import React from 'react';
 
 export const SearchIcon: React.FC<{className?: string}> = ({ className = "h-6 w-6" }) => (

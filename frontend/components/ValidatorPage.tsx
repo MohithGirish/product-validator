@@ -1,3 +1,10 @@
+// The main validation flow.
+// Step 1: scan the product image, read the barcode and look the product up.
+//   Several matches -> pick the market type; no match -> admins can add the
+//   product (ProductFormModal), staff get a "not found" message.
+// Step 2: scan the printed batch-code block, check it with validateFullCode,
+//   show ResultModal and save the record to history.
+// The badge at the top shows which OCR engine answered (Cloud or Local).
 
 import React, { useState, useRef, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';

@@ -1,3 +1,4 @@
+// Small spinning loading indicator, mostly shown inside buttons.
 
 import React from 'react';
 

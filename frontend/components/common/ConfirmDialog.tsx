@@ -1,3 +1,5 @@
+// Styled yes/no dialog for destructive actions, used instead of window.confirm().
+
 import React from 'react';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import Portal from './Portal';

@@ -1,3 +1,6 @@
+// Deletes the local SQLite fallback file so the next backend start recreates
+// and reseeds it (npm run db:reset). Does not touch a Turso database.
+
 const fs = require('fs');
 const path = require('path');
 

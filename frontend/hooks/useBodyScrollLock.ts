@@ -1,3 +1,6 @@
+// Locks page scrolling while a dialog is open. Ref-counted, so stacked
+// dialogs restore scrolling only when the last one closes.
+
 import { useEffect } from 'react';
 
 // Ref-count so stacked dialogs (e.g. a confirm over a form) only restore once.

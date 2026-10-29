@@ -1,3 +1,6 @@
+// Inline SVG icon: X (close). Size and color come from the className prop.
+// Used in CameraModal, Modal, DatabasePage, HistoryPage, ResultModal.
+
 import React from 'react';
 
 export const XIcon: React.FC<{className?: string}> = ({ className = "h-6 w-6" }) => (

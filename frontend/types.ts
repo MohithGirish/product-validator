@@ -1,3 +1,6 @@
+// Shared TypeScript types: users, products, validation records and their
+// per-check results, plus the Page and ValidationStatus enums.
+
 export interface User {
   id: string;
   username: string;

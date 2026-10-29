@@ -1,3 +1,8 @@
+// Root component. Wraps everything in the theme, toast and auth providers,
+// shows LoginPage until someone signs in, then switches between the Validator,
+// Database, History and Admin pages with local state (no router). The Admin page
+// renders only for admins.
+
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';

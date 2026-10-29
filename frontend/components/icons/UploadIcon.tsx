@@ -1,3 +1,5 @@
+// Inline SVG icon: upload. Size and color come from the className prop.
+// Used in AnalysisPage, DatabasePage, ValidatorPage.
 
 import React from 'react';
 

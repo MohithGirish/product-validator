@@ -25,17 +25,17 @@ No test suite is configured. There is no linter configured.
 
 ## Environment Setup
 
-No API key is required for local OCR mode.
+Settings live in `../.env.local` (see `../.env.example` and the root README). `GEMINI_API_KEY` enables cloud OCR; without it the backend uses local OCR only.
 
 ## Architecture
 
-This is a React 19 + TypeScript SPA built with Vite. Image extraction and product persistence are handled by the Node backend in `../backend`.
+This is a React 19 + TypeScript SPA built with Vite. OCR, products and users are handled by the Node backend in `../backend`. Every source file starts with a header comment describing what it does; keep those up to date when a file's job changes.
 
 ### Core Data Flow
 
-The validation workflow is a two-step local OCR pipeline:
-1. **Step 1 – Barcode scan**: User uploads/captures a product image → `imageExtractionService.extractProductInfoFromImage()` returns `{barcode, productName}` → `databaseService.findProductsByBarcode()` looks up the product.
-2. **Step 2 – Batch code scan**: User uploads/captures the batch info image → `imageExtractionService.extractBatchCodeFromImage()` returns `{batchCode, productionDate, expiryDate, price, batchInfoText}` → `ValidatorPage` calls `validateFullCode()` in [utils/validateProduct.ts](utils/validateProduct.ts), which verifies the **entire** printed code block against the master record: batch-code format, MRP/price, shelf-life (expiry − production vs. stored `shelfLife`), date presence/order, and a per-line generalized (#/@) comparison of the info block. Each sub-check returns a pass/fail with expected-vs-found values, surfaced in `ResultModal`.
+The validation workflow is a two-step OCR pipeline (Gemini on the backend, local OCR fallback when Gemini is unreachable):
+1. **Step 1 – Barcode scan**: User uploads/captures a product image → `imageExtractionService.extractProductInfoFromImage()` returns `{barcode, productName, engine}` → `databaseService.findProductsByBarcode()` looks up the product.
+2. **Step 2 – Batch code scan**: User uploads/captures the batch info image → `imageExtractionService.extractBatchCodeFromImage()` returns `{batchCode, productionDate, expiryDate, price, batchInfoText, engine}` → `ValidatorPage` calls `validateFullCode()` in [utils/validateProduct.ts](utils/validateProduct.ts), which verifies the **entire** printed code block against the master record: batch-code format, MRP/price, shelf-life (expiry − production vs. stored `shelfLife`), date presence/order, and a per-line generalized (#/@) comparison of the info block. Each sub-check returns a pass/fail with expected-vs-found values, surfaced in `ResultModal`.
 
 ### Batch Number Format Convention
 
@@ -48,19 +48,20 @@ Example: `"##:## ##@##"` matches `"16:47 01B11"`. This format string is used to 
 
 ### Database / Persistence Layer (`services/databaseService.ts`)
 
-The `databaseService` object is the sole interface for data access. It supports two backends, selected by `GOOGLE_APPS_SCRIPT_URL`:
-- **Empty string (default)**: LocalStorage mode — data lives in `localStorage` under keys `db_users`, `db_products`, `db_history`.
-- **URL set**: Google Sheets mode — GET/POST requests to the Apps Script webhook.
+The `databaseService` object is the sole interface for data access:
+- **Users**: backend only (`/api/users`, `/api/auth/login`).
+- **Products**: backend (`/api/products`); if a request fails, falls back to `localStorage` (`db_products`, seeded from `MASTER_PRODUCT_DATABASE` in [constants.ts](constants.ts)).
+- **Validation history**: `localStorage` only (`db_history`). It is never sent to the backend, so it is per-browser.
 
-On first load, `initializeDatabase()` seeds localStorage from `MOCK_USERS` and `MASTER_PRODUCT_DATABASE` in [constants.ts](constants.ts) using merge logic (won't overwrite existing local records).
+The Google Sheets mode (`GOOGLE_APPS_SCRIPT_URL`) is switched off. `MOCK_USERS` in `constants.ts` is still written to `localStorage` but nothing reads it.
 
 ### Auth & Role Model (`context/AuthContext.tsx`)
 
-`AuthProvider` wraps the entire app. The `useAuth()` hook provides `{user, login, logout, history, addHistoryRecord}`. Roles are `'admin'` or `'staff'`:
+`AuthProvider` wraps the entire app. The `useAuth()` hook provides `{user, login, logout, history, addHistoryRecord, clearHistory}`. Credentials are checked by the backend; the signed-in user is held in memory only (a reload signs out). Roles are `'admin'` or `'staff'`:
 - **admin**: sees all users' history, can add/edit/delete products, can access `AdminPage`.
 - **staff**: sees only their own history records.
 
-Default credentials are in [constants.ts](constants.ts) (e.g., `admin`/`admin`).
+Default accounts are seeded by `../backend/db.js` (`Admin` / `Admin@123`, `User1`–`User4` / `User1@123`…). The API has no session tokens: role checks happen only in the UI.
 
 ### Page Routing
 
@@ -70,11 +71,11 @@ There is no router library. `App.tsx` manages a `currentPage` state (enum `Page`
 
 - [ValidatorPage.tsx](components/ValidatorPage.tsx) — the primary feature; owns the multi-step validation state machine (`'barcode' | 'market_select' | 'batch'`).
 - [DatabasePage.tsx](components/DatabasePage.tsx) — product CRUD UI; exports `ProductFormModal` (also used by `ValidatorPage` when admin scans an unknown barcode).
-- [AdminPage.tsx](components/AdminPage.tsx) — user management, admin-only.
-- [HistoryPage.tsx](components/HistoryPage.tsx) — view/export validation records.
-- [AnalysisPage.tsx](components/AnalysisPage.tsx) — local OCR text extraction and detected-field summary.
+- [AdminPage.tsx](components/AdminPage.tsx) — user management and the administrator log, admin-only.
+- [HistoryPage.tsx](components/HistoryPage.tsx) — view validation records; admins can clear them.
+- [AnalysisPage.tsx](components/AnalysisPage.tsx) — free-form image analysis via `/api/analyze-image`. Not linked from `App.tsx`.
 - [CameraModal.tsx](components/CameraModal.tsx) — wraps the browser camera API for in-app capture.
 
-### Local Extraction Service (`services/imageExtractionService.ts`)
+### Image Extraction Service (`services/imageExtractionService.ts`)
 
-All image routes call the local backend over `/api`, which performs OCR and barcode decoding on the server. Images are uploaded as multipart form data and returned as structured JSON or readable OCR summaries.
+All image routes call the backend over `/api`, which runs Gemini OCR (or local OCR + barcode decoding as a fallback). Images are uploaded as multipart form data (max 4 MB) with a 60 s client timeout; responses are JSON and include the `engine` that answered.

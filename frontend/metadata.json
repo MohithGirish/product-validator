@@ -1,6 +1,6 @@
 {
   "name": "Factory Product Code Validator",
-  "description": "An application for factory quality control to validate product batch numbers and barcodes using local OCR and barcode decoding. It features user authentication and tracks all validation attempts.",
+  "description": "An application for factory quality control to validate product barcodes and printed batch codes using Gemini OCR, with local OCR and barcode decoding as a fallback. It features user authentication and tracks all validation attempts.",
   "requestFramePermissions": [
     "camera"
   ],

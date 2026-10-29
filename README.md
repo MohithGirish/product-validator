@@ -2,26 +2,26 @@
 
 A factory QC tool (built for ITC Limited) for validating product barcodes and printed batch code blocks using OCR. Upload or capture a product label image — the app identifies the product by barcode, then verifies the **entire** printed code block (batch number format, MRP, production/expiry dates, and shelf life) against the product database.
 
-> 📖 **End-user instructions:** see [USER_GUIDE.md](USER_GUIDE.md) for a complete, step-by-step guide.
+Live deployment: Render (`product-validator-7i2l.onrender.com`).
 
 ## Features
 
 - **Two-step OCR validation** — barcode scan → batch code validation
 - **Full-code verification** — checks batch-code format, MRP/price, production & expiry dates, shelf life, and a per-line comparison of the printed info block (not just the format line)
-- **Cloud OCR / Local OCR** — uses Google Gemini OCR by default; automatically falls back to local OCR (PaddleOCR → Tesseract) on network failure
+- **Cloud OCR / Local OCR** — uses Google Gemini OCR by default; automatically falls back to local OCR (PaddleOCR → Tesseract) when Gemini is unreachable
 - **Role-based access** — Admin sees all users' history and can manage products and users; Staff sees only their own records
 - **User management** — admins add/remove sign-in accounts; enforced password policy and account-protection invariants (see below)
-- **Validation history** — full audit log with thumbnails of scanned images; admin can clear all history
+- **Validation history** — audit log with thumbnails of scanned images; admin can clear all history. History is saved in the browser, not on the server (see [Persistence](#persistence--deployment))
 - **Product database** — CRUD with batch format editor and auto-inference from label images
-- **CSV export** — admin can export the full validation log
+- **CSV export** — the product list and the full validation log
 - **Mobile-first responsive UI** — bottom tab navigation, card layouts that replace wide tables on phones, a full-screen portrait camera, safe-area (notch / gesture-bar) handling, and dialogs that always stay reachable
-- **Light / Dark / System theme** — a three-option appearance picker (in the top-right ⋮ menu) with a premium "graphite navy" dark palette; follows the device theme when set to System, and remembers your choice
+- **Light / Dark / System theme** — a three-option appearance picker (in the top-right ⋮ menu) with a "graphite navy" dark palette; follows the device theme when set to System, and remembers your choice
 
 ## Tech Stack
 
 | Layer | Tech |
 |---|---|
-| Frontend | React 19, TypeScript, Vite, Tailwind CSS |
+| Frontend | React 19, TypeScript, Vite, Tailwind CSS (CDN) |
 | Backend | Node.js, Express |
 | Database | libSQL — [Turso](https://turso.tech) (cloud) in production; local SQLite file as fallback (`@libsql/client`) |
 | Primary OCR | Google Gemini API (`gemini-3.8-flash`) |
@@ -31,31 +31,46 @@ A factory QC tool (built for ITC Limited) for validating product barcodes and pr
 
 ## Project Structure
 
+Every source file starts with a short comment describing what it does.
+
 ```
 factory-product-code-validator/
 ├── backend/
-│   ├── server.js               # Express API server (port 3001): auth, users, products, OCR
-│   ├── db.js                   # libSQL/Turso schema + CRUD for products and users
-│   ├── data/app.db             # Local SQLite fallback DB (used only when Turso is not configured)
-│   ├── geminiOcr.js            # Cloud (Gemini) OCR functions
-│   ├── localOcr.js             # PaddleOCR / Tesseract fallback
-│   ├── seedProducts.js         # Initial product seed data
+│   ├── server.js               # Express API (port 3001): auth, users, products, OCR routing; serves the built frontend in production
+│   ├── db.js                   # libSQL/Turso schema, seeding + CRUD for products and users
+│   ├── geminiOcr.js            # Cloud OCR (Gemini)
+│   ├── localOcr.js             # Offline OCR: PaddleOCR / Tesseract + ZXing barcode decoding
+│   ├── seedProducts.js         # Products seeded into an empty database
+│   ├── eng.traineddata         # Tesseract English language data
+│   ├── data/app.db             # Local SQLite fallback DB (created on demand, not committed)
 │   └── scripts/
-│       └── paddle_ocr_runner.py
+│       ├── paddle_ocr_runner.py # PaddleOCR bridge (JSON over stdin/stdout)
+│       ├── printDbPath.js      # npm run db:path
+│       └── resetDb.js          # npm run db:reset
 ├── frontend/
+│   ├── index.html              # App shell: Tailwind config, fonts, dark-mode remap
+│   ├── App.tsx                 # Providers + page switching (no router)
 │   ├── components/
 │   │   ├── ValidatorPage.tsx   # Main two-step validator
+│   │   ├── ResultModal.tsx     # Per-check validation result
+│   │   ├── DatabasePage.tsx    # Product CRUD + ProductFormModal
 │   │   ├── HistoryPage.tsx     # Validation audit log
-│   │   ├── DatabasePage.tsx    # Product CRUD
-│   │   ├── AdminPage.tsx       # Admin dashboard + user management
-│   │   └── common/             # Reusable Modal, ConfirmDialog, Toast, Spinner
-│   ├── context/AuthContext.tsx
+│   │   ├── AdminPage.tsx       # User management + administrator log
+│   │   ├── LoginPage.tsx, Header.tsx, ThemeMenu.tsx, CameraModal.tsx
+│   │   ├── AnalysisPage.tsx    # Free-form image analysis (not linked in the UI)
+│   │   ├── common/             # Modal, ConfirmDialog, Portal, Toast, Spinner
+│   │   └── icons/              # Inline SVG icons
+│   ├── context/                # AuthContext (user + history), ThemeContext
+│   ├── hooks/                  # useAuth, useBodyScrollLock, useLocalStorage
 │   ├── services/
-│   │   ├── databaseService.ts
-│   │   └── imageExtractionService.ts
-│   ├── utils/validateProduct.ts # Full-code validation logic
+│   │   ├── databaseService.ts  # Users/products via the API; history in localStorage
+│   │   └── imageExtractionService.ts # Calls the OCR endpoints
+│   ├── utils/
+│   │   ├── validateProduct.ts  # Full-code validation logic
+│   │   └── exportUtils.ts      # CSV download
+│   ├── constants.ts            # Offline seed data for localStorage
 │   └── types.ts
-├── USER_GUIDE.md               # End-user guide
+├── package.json                # Workspace scripts (dev, build, start)
 ├── .env.example
 └── .env.local                  # Your local config (not committed)
 ```
@@ -87,7 +102,7 @@ cd ../backend && npm install
 cp .env.example .env.local
 ```
 
-Edit `.env.local`:
+The backend reads `.env.local` from the repo root. Edit it:
 
 ```env
 # Get a free key at https://aistudio.google.com/app/apikey
@@ -99,9 +114,23 @@ TURSO_DATABASE_URL=
 TURSO_AUTH_TOKEN=
 ```
 
-If `GEMINI_API_KEY` is blank or the network is unreachable, the app automatically switches to local OCR — no extra config needed.
+If `GEMINI_API_KEY` is blank, the app uses local OCR only — no extra config needed.
 
 If the `TURSO_*` vars are blank, the app stores data in a local SQLite file (`backend/data/app.db`) — fine for development.
+
+#### All settings
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `GEMINI_API_KEY` | — | Enables cloud OCR. Blank = local OCR only |
+| `GEMINI_MODEL` | `gemini-3.8-flash` | Gemini model. If Google retires the model, every OCR request fails with `404 Not Found` — change it here (and on your host) |
+| `GEMINI_TIMEOUT_MS` | `30000` | Gemini request timeout; a timeout triggers the local-OCR fallback |
+| `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` | — | Turso database. Blank = local SQLite file |
+| `OCR_ENGINE` | `paddle` | Local OCR engine: `paddle` (PaddleOCR → Tesseract) or `tesseract` |
+| `PADDLE_PYTHON_EXECUTABLE` | auto (`.venv`, then `python`) | Python used to run PaddleOCR |
+| `PADDLE_OCR_LANG` | `en` | PaddleOCR language |
+| `PADDLE_TIMEOUT_MS` | `25000` | PaddleOCR timeout |
+| `PORT` | `3001` | Backend port |
 
 ### 3. (Optional) Set up PaddleOCR
 
@@ -138,7 +167,14 @@ Open [http://localhost:3002](http://localhost:3002). The dev server proxies `/ap
 
 ## Persistence & Deployment
 
-Products, users, and history live in a libSQL database. There are two backends, selected purely by environment variables:
+| Data | Where it lives |
+|---|---|
+| Products, users | libSQL database on the server (Turso or local file, see below) |
+| Validation history | **The browser's `localStorage`** (key `db_history`) on each device |
+
+Validation history is never sent to the server. Each phone or computer keeps its own history, an admin only sees records made on the same device, and clearing the browser's site data deletes it. See [Known limitations](#known-limitations).
+
+The server database is selected purely by environment variables:
 
 | Mode | When | Where data lives |
 |---|---|---|
@@ -162,6 +198,18 @@ Products, users, and history live in a libSQL database. There are two backends, 
 
 On first boot against an empty database the app auto-creates the tables and seeds the default products and users; an already-populated database is left untouched.
 
+### Deploy on Render
+
+One web service runs the backend and serves the built frontend from the same origin. The root `package.json` scripts are set up for this:
+
+| Setting | Value |
+|---|---|
+| Build command | `npm run build` |
+| Start command | `npm run start` |
+| Environment | `GEMINI_API_KEY`, `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` (optionally `GEMINI_MODEL`) |
+
+With auto-deploy on (Render's default), every push to `main` deploys. A value set in Render's Environment overrides the code default, so if you set `GEMINI_MODEL` there, keep it current.
+
 ## Default Credentials
 
 Seeded into the `users` table on first run (against an empty database):
@@ -174,7 +222,7 @@ Seeded into the `users` table on first run (against an empty database):
 | `User3` | `User3@123` | Staff — own history only | |
 | `User4` | `User4@123` | Staff — own history only | |
 
-> These are starting credentials for setup. Change the staff passwords before real use (remove and re-create via the Admin → User Management screen). Passwords are stored in the database and are never sent back to the client.
+> These are starting credentials for setup. Change the staff passwords before real use (remove and re-create via the Admin → User Management screen). Passwords are never sent back to the client.
 
 ## User Management & Account Rules
 
@@ -206,20 +254,23 @@ On the second step, the app verifies the **entire** printed code block against t
 
 | Check | Verifies | Affects verdict |
 |---|---|---|
+| **Barcode** | The scanned barcode (already used to find the product), shown for the record | Informational only |
 | **Batch Code Format** | The batch number matches the product's `batchNumberFormat` pattern | Yes |
 | **MRP / Price** | The printed price matches the product's stored MRP (when applicable) | Yes |
 | **Production / Expiry Dates** | Both dates are present and expiry is after production | Yes |
 | **Shelf Life** | `expiry − production` matches the stored shelf life (within tolerance) | Yes |
 | **Info Block Lines** | Per-line, OCR-tolerant comparison of the printed block against the reference | Informational only |
 
-The result modal shows each check with its **expected vs. found** values. "Info Block Lines" is a diagnostic and does not by itself fail an otherwise-valid product.
+The result modal shows each check with its **expected vs. found** values. Informational checks never fail an otherwise-valid product on their own.
 
 ## OCR Mode
 
-The mode badge in the top-right corner of the Validator page shows which engine is active:
+The mode badge in the top-right corner of the Validator page shows which engine answered the last scan:
 
-- **Cloud OCR** (navy) — the cloud OCR service (Gemini) is reachable and being used
-- **Local OCR** (amber) — network unavailable; using PaddleOCR / Tesseract
+- **Cloud OCR** (navy) — Gemini
+- **Local OCR** (amber) — PaddleOCR / Tesseract
+
+The backend falls back to local OCR only when Gemini can't be reached (network error, DNS failure, timeout). Any other Gemini error — a bad key, quota, or a retired model — is shown to the user as `OCR error: …` so it gets noticed and fixed.
 
 ## Theme & Appearance
 
@@ -250,7 +301,7 @@ The UI is designed mobile-first and is the primary deployment target:
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/api/health` | Server status and Gemini availability |
+| `GET` | `/api/health` | Server status and whether Gemini is configured |
 | `POST` | `/api/auth/login` | Authenticate; returns the user (never the password) |
 | `GET` | `/api/users` | List users (admins first, then staff) |
 | `POST` | `/api/users` | Create a user (enforces the password policy) |
@@ -261,11 +312,19 @@ The UI is designed mobile-first and is the primary deployment target:
 | `PUT` | `/api/products/:id` | Update product |
 | `DELETE` | `/api/products/:id` | Delete product |
 | `POST` | `/api/extract-product` | Extract barcode + product name from image |
-| `POST` | `/api/extract-batch` | Extract and validate batch code from image |
+| `POST` | `/api/extract-batch` | Extract batch code, dates and price from image |
 | `POST` | `/api/extract-batch-format` | Infer batch format from a label image |
 | `POST` | `/api/analyze-image` | Free-form OCR analysis of an image |
 
-> The OCR endpoints are rate-limited to 20 requests/minute per IP.
+> The OCR endpoints take a multipart `image` field (max **4 MB**), are rate-limited to 20 requests/minute per IP, and return an `engine` field (`gemini` or `local`).
+
+## Known limitations
+
+- **History is per-browser.** Validation records live in `localStorage`, not the database (see above).
+- **No server-side sessions.** The API trusts the client: the user-management and product endpoints don't check who is calling, and the frontend only hides admin screens from staff. Acceptable on a trusted factory network; not for the open internet.
+- **Passwords are stored in plain text** in the `users` table.
+- **Sign-in isn't remembered.** Reloading the page signs the user out.
+- `AnalysisPage.tsx` (free-form image analysis) is built but not linked in the navigation.
 
 ## Scripts
 
@@ -275,6 +334,9 @@ The UI is designed mobile-first and is the primary deployment target:
 | `npm run dev:backend` | Backend only (port 3001) |
 | `npm run dev:frontend` | Frontend only (port 3002) |
 | `npm run build` | Production frontend build |
-| `npm run start` | Production backend start |
+| `npm run start` | Production backend start (serves the built frontend) |
+| `cd backend && npm run db:path` | Print the path of the local SQLite file |
 | `cd backend && npm run db:reset` | Delete the **local** SQLite file (`backend/data/app.db`) so it's recreated + reseeded on next start. Does **not** affect a Turso database — reset that from the Turso dashboard. |
 | `cd backend && npm run ocr:paddle:check` | Verify PaddleOCR installation |
+
+There is no test suite, linter or formatter configured yet.

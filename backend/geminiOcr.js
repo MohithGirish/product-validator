@@ -1,3 +1,9 @@
+// Cloud OCR through the Google Gemini API (model from GEMINI_MODEL, default
+// gemini-3.8-flash; timeout from GEMINI_TIMEOUT_MS). Each export sends the image
+// with a task-specific prompt and parses the JSON reply: barcode + product name,
+// batch code with dates and price, batch-format inference, and free-form image
+// analysis. isAvailable() is false when GEMINI_API_KEY is not set.
+
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') });
 

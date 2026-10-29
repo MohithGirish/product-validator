@@ -1,53 +1,37 @@
 # Backend
 
+Express API for the validator: sign-in, user management, product CRUD and OCR. In production it also serves the built frontend. Setup, configuration and the full API list are in the [root README](../README.md).
+
 ## Run
 
 - Install deps: `npm install`
-- Dev mode: `npm run dev`
+- Dev mode (restarts on change): `npm run dev`
 - Start mode: `npm start`
-- Show DB path: `npm run db:path`
-- Reset DB (reseed on next start): `npm run db:reset`
+- Show the local DB path: `npm run db:path`
+- Reset the local DB (reseeds on next start): `npm run db:reset`
+- Check PaddleOCR: `npm run ocr:paddle:check`
 
-## Environment
+Settings are read from `../.env.local` (see `../.env.example`).
 
-No API key is required. Image extraction runs locally with OCR and barcode decoding.
+## Files
 
-### OCR Engine
+| File | What it does |
+|---|---|
+| `server.js` | Routes. Sends each OCR request to Gemini, falling back to local OCR only when Gemini is unreachable |
+| `db.js` | libSQL client (Turso when `TURSO_DATABASE_URL` is set, else `data/app.db`), schema, seeding, product and user CRUD, account rules |
+| `geminiOcr.js` | Cloud OCR with Gemini (`GEMINI_API_KEY`, `GEMINI_MODEL`, default `gemini-3.8-flash`) |
+| `localOcr.js` | Offline OCR: PaddleOCR → Tesseract.js for text, ZXing for barcodes, plus parsing of batch codes, dates and prices |
+| `seedProducts.js` | Products inserted into an empty database |
+| `scripts/paddle_ocr_runner.py` | PaddleOCR bridge called by `localOcr.js` (JSON over stdin/stdout) |
+| `eng.traineddata` | Tesseract English language data |
 
-Backend OCR now uses PaddleOCR as the primary engine, with automatic fallback to
-Tesseract if PaddleOCR is unavailable.
+## Local OCR settings
 
-One-time Python setup (inside your existing `.venv`):
+Used only when Gemini isn't configured or can't be reached.
 
-- `pip install paddleocr paddlepaddle`
-
-Optional environment variables in `.env.local`:
-
-- `OCR_ENGINE=paddle` (default), or `tesseract` to force legacy OCR
-- `PADDLE_PYTHON_EXECUTABLE=python` (set full path if needed)
+- `OCR_ENGINE=paddle` (default, PaddleOCR → Tesseract) or `tesseract`
+- `PADDLE_PYTHON_EXECUTABLE` — Python to use (default: `../.venv`, then `python`)
 - `PADDLE_OCR_LANG=en`
 - `PADDLE_TIMEOUT_MS=25000`
 
-## Product Database
-
-- Engine: SQLite
-- File: `backend/data/app.db`
-- Seed source: `backend/seedProducts.js`
-
-## API
-
-### Health
-- `GET /api/health`
-
-### Products
-- `GET /api/products`
-- `GET /api/products/barcode/:barcode`
-- `POST /api/products`
-- `PUT /api/products/:id`
-- `DELETE /api/products/:id`
-
-### Local OCR Extraction
-- `POST /api/extract-product`
-- `POST /api/extract-batch`
-- `POST /api/extract-batch-format`
-- `POST /api/analyze-image`
+One-time PaddleOCR setup (inside the repo's `.venv`): `pip install paddleocr paddlepaddle`.

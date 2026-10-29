@@ -1,3 +1,5 @@
+// Shared modal shell (backdrop, navy header, optional footer) used by the app's dialogs.
+
 import React, { useEffect } from 'react';
 import { XIcon } from '../icons/XIcon';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';

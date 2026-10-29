@@ -1,3 +1,11 @@
+// Data access for the frontend.
+// - Users: always through the backend API (/api/users, /api/auth/login).
+// - Products: through the backend (/api/products); if a request fails, falls
+//   back to this browser's localStorage.
+// - Validation history: stored ONLY in this browser's localStorage (db_history).
+//   It is not sent to the backend, so it isn't shared between devices.
+// The Google Sheets mode below is switched off (GOOGLE_APPS_SCRIPT_URL is empty).
+
 import { ProductData, User, ValidationRecord } from '../types';
 import { MOCK_USERS, MASTER_PRODUCT_DATABASE } from '../constants';
 

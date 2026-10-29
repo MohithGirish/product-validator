@@ -1,3 +1,5 @@
+// Inline SVG icon: Database tab. Size and color come from the className prop.
+// Used in Header.
 
 import React from 'react';
 

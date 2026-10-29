@@ -1,3 +1,6 @@
+// Shows the outcome of a validation: overall pass/fail, then each check with
+// expected vs. found values. The batch code is shown character by character,
+// highlighting characters that don't fit the expected format.
 
 import React from 'react';
 import { ValidationRecord, ValidationCheck } from '../types';

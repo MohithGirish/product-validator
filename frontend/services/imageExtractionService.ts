@@ -1,3 +1,8 @@
+// Sends an image to one of the backend OCR endpoints (/api/extract-product,
+// /extract-batch, /extract-batch-format, /analyze-image) as multipart form data,
+// with a 60-second timeout. Results include which engine answered
+// ('gemini' or 'local').
+
 const API_BASE = '/api';
 const OCR_TIMEOUT_MS = 60_000;
 

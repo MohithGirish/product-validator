@@ -1,3 +1,5 @@
+// Inline SVG icon: vertical three dots (⋮ menu). Size and color come from the className prop.
+// Used in ThemeMenu.
 
 import React from 'react';
 

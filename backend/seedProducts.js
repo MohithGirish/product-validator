@@ -1,3 +1,7 @@
+// Starter products inserted when the products table is empty
+// (see initializeDatabase in db.js). Edit these only for fresh databases;
+// an existing database is never reseeded.
+
 module.exports = [
   {
     id: 'prod-8909081011368-general',

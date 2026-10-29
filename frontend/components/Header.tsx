@@ -1,3 +1,7 @@
+// Top bar (branding, user avatar, the ⋮ menu) and page navigation: tabs in
+// the header on wider screens, a fixed bottom tab bar on phones. The Admin tab
+// appears only for admins.
+
 import React from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Page } from '../types';

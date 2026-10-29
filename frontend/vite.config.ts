@@ -1,3 +1,7 @@
+// Vite config. In development, /api is proxied to the backend on port 3001.
+// The npm scripts start the dev server with --port 3002, which overrides the
+// port set here.
+
 import path from 'path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';

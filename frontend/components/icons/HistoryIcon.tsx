@@ -1,3 +1,5 @@
+// Inline SVG icon: History tab. Size and color come from the className prop.
+// Used in Header.
 
 import React from 'react';
 

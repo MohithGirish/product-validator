@@ -1,3 +1,6 @@
+// Inline SVG icon: Admin tab. Size and color come from the className prop.
+// Used in Header.
+
 import React from 'react';
 
 export const AdminIcon: React.FC<{className?: string}> = ({ className = "h-5 w-5" }) => (
